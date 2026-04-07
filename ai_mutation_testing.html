@@ -1,0 +1,2414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Mutation Testing — The Complete Guide</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Space+Mono:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════════════════════════════════
+   TOKENS & RESET
+═══════════════════════════════════════════ */
+:root {
+  --navy:       #0A0F1E;
+  --navy-mid:   #111827;
+  --navy-light: #1E2D45;
+  --navy-card:  #131f35;
+  --green:      #00E87A;
+  --green-dim:  #00b85f;
+  --blue:       #4D9FFF;
+  --red:        #FF4D6A;
+  --orange:     #FF8C42;
+  --white:      #F0F4FF;
+  --white-dim:  #C8D0E0;
+  --gray:       #8892A4;
+  --gray-dark:  #3A4558;
+  --font-display: 'Syne', sans-serif;
+  --font-mono:    'Space Mono', monospace;
+  --font-body:    'DM Sans', sans-serif;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--navy);
+  color: var(--white);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.6;
+  overflow-x: hidden;
+}
+
+/* ═══════════════════════════════════════════
+   SCROLLBAR
+═══════════════════════════════════════════ */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: var(--navy-mid); }
+::-webkit-scrollbar-thumb { background: var(--green-dim); border-radius: 2px; }
+
+/* ═══════════════════════════════════════════
+   NAV — FIXED LEFT SIDEBAR
+═══════════════════════════════════════════ */
+.nav {
+  position: fixed;
+  left: 24px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.nav-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--gray-dark);
+  transition: all 0.3s ease;
+  flex-shrink: 0;
+}
+
+.nav-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--gray);
+  opacity: 0;
+  transform: translateX(-8px);
+  transition: all 0.3s ease;
+  white-space: nowrap;
+  letter-spacing: 1px;
+}
+
+.nav-item:hover .nav-label,
+.nav-item.active .nav-label {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.nav-item.active .nav-dot {
+  background: var(--green);
+  box-shadow: 0 0 8px var(--green);
+  width: 10px;
+  height: 10px;
+}
+
+.nav-item:hover .nav-dot {
+  background: var(--blue);
+}
+
+/* ═══════════════════════════════════════════
+   SECTIONS
+═══════════════════════════════════════════ */
+section {
+  min-height: 100vh;
+  padding: 80px 80px 80px 80px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.section-inner {
+  max-width: 1100px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+/* ═══════════════════════════════════════════
+   ANIMATION UTILITIES
+═══════════════════════════════════════════ */
+.reveal {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: opacity 0.7s ease, transform 0.7s ease;
+}
+
+.reveal.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.reveal-delay-1 { transition-delay: 0.1s; }
+.reveal-delay-2 { transition-delay: 0.2s; }
+.reveal-delay-3 { transition-delay: 0.3s; }
+.reveal-delay-4 { transition-delay: 0.4s; }
+.reveal-delay-5 { transition-delay: 0.5s; }
+
+/* ═══════════════════════════════════════════
+   SHARED COMPONENTS
+═══════════════════════════════════════════ */
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.eyebrow::before {
+  content: '';
+  display: block;
+  width: 32px;
+  height: 2px;
+  background: currentColor;
+}
+
+h1, h2, h3 {
+  font-family: var(--font-display);
+  line-height: 1.1;
+}
+
+.section-title {
+  font-size: clamp(36px, 5vw, 64px);
+  font-weight: 800;
+  margin-bottom: 24px;
+}
+
+.section-subtitle {
+  font-size: clamp(16px, 2vw, 20px);
+  color: var(--white-dim);
+  max-width: 680px;
+  margin-bottom: 56px;
+  line-height: 1.6;
+}
+
+.card {
+  background: var(--navy-card);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 12px;
+  padding: 28px;
+  transition: border-color 0.3s ease, transform 0.3s ease;
+}
+
+.card:hover {
+  border-color: rgba(255,255,255,0.12);
+  transform: translateY(-2px);
+}
+
+.tag {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  padding: 4px 10px;
+  border-radius: 4px;
+  letter-spacing: 1px;
+}
+
+/* ═══════════════════════════════════════════
+   CODE BLOCKS
+═══════════════════════════════════════════ */
+.code-block {
+  background: #0D1525;
+  border: 1px solid rgba(77,159,255,0.15);
+  border-radius: 10px;
+  overflow: hidden;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.7;
+  position: relative;
+}
+
+.code-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  background: rgba(77,159,255,0.06);
+  border-bottom: 1px solid rgba(77,159,255,0.1);
+}
+
+.code-dots {
+  display: flex;
+  gap: 6px;
+}
+
+.code-dots span {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.code-dots span:nth-child(1) { background: #FF5F57; }
+.code-dots span:nth-child(2) { background: #FEBC2E; }
+.code-dots span:nth-child(3) { background: #28C840; }
+
+.code-filename {
+  font-size: 11px;
+  color: var(--gray);
+  letter-spacing: 0.5px;
+}
+
+.code-copy {
+  font-size: 10px;
+  color: var(--blue);
+  background: rgba(77,159,255,0.1);
+  border: none;
+  padding: 4px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-family: var(--font-mono);
+  letter-spacing: 0.5px;
+  transition: background 0.2s;
+}
+
+.code-copy:hover { background: rgba(77,159,255,0.2); }
+.code-copy.copied { color: var(--green); background: rgba(0,232,122,0.1); }
+
+.code-body {
+  padding: 20px;
+  overflow-x: auto;
+  white-space: pre;
+}
+
+/* Syntax colors */
+.kw  { color: #C792EA; }  /* keywords */
+.fn  { color: #82AAFF; }  /* functions */
+.str { color: #C3E88D; }  /* strings */
+.num { color: #F78C6C; }  /* numbers */
+.cmt { color: #546E7A; font-style: italic; }  /* comments */
+.key { color: #FFCB6B; }  /* object keys */
+.val { color: var(--green); }  /* values / highlight */
+.err { color: var(--red); }  /* errors / mutations */
+.mut { color: var(--orange); background: rgba(255,140,66,0.08); border-radius: 3px; padding: 0 2px; } /* mutant highlight */
+
+/* ═══════════════════════════════════════════
+   SECTION 1 — HERO
+═══════════════════════════════════════════ */
+#hero {
+  background: var(--navy);
+  min-height: 100vh;
+}
+
+.hero-bg {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.hero-blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.12;
+}
+
+.hero-blob-1 {
+  width: 600px; height: 600px;
+  background: var(--green);
+  top: -200px; right: -100px;
+  animation: float1 8s ease-in-out infinite;
+}
+
+.hero-blob-2 {
+  width: 400px; height: 400px;
+  background: var(--blue);
+  bottom: -100px; left: -50px;
+  animation: float2 10s ease-in-out infinite;
+}
+
+@keyframes float1 {
+  0%, 100% { transform: translate(0,0) scale(1); }
+  50% { transform: translate(-30px, 30px) scale(1.05); }
+}
+
+@keyframes float2 {
+  0%, 100% { transform: translate(0,0) scale(1); }
+  50% { transform: translate(30px, -20px) scale(1.08); }
+}
+
+.hero-content {
+  position: relative;
+  z-index: 2;
+}
+
+.hero-kicker {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--green);
+  letter-spacing: 3px;
+  margin-bottom: 24px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.hero-kicker::before {
+  content: '';
+  width: 40px;
+  height: 2px;
+  background: var(--green);
+}
+
+.hero-title {
+  font-size: clamp(48px, 7vw, 96px);
+  font-weight: 800;
+  line-height: 1.0;
+  margin-bottom: 32px;
+}
+
+.hero-title .accent { color: var(--green); }
+.hero-title .muted  { color: var(--gray); }
+
+.hero-subtitle {
+  font-size: clamp(16px, 2vw, 22px);
+  color: var(--white-dim);
+  max-width: 600px;
+  margin-bottom: 48px;
+  line-height: 1.6;
+}
+
+/* Counter strip */
+.counter-strip {
+  display: flex;
+  gap: 0;
+  margin-bottom: 48px;
+  border: 1px solid var(--gray-dark);
+  border-radius: 12px;
+  overflow: hidden;
+  max-width: 680px;
+}
+
+.counter-item {
+  flex: 1;
+  padding: 20px 24px;
+  border-right: 1px solid var(--gray-dark);
+  position: relative;
+}
+
+.counter-item:last-child { border-right: none; }
+
+.counter-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--gray);
+  letter-spacing: 1px;
+  margin-bottom: 8px;
+}
+
+.counter-value {
+  font-family: var(--font-display);
+  font-size: 36px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.counter-note {
+  font-size: 11px;
+  color: var(--gray);
+  margin-top: 4px;
+}
+
+.counter-item.danger .counter-value { color: var(--red); }
+.counter-item.warn  .counter-value { color: var(--orange); }
+.counter-item.safe  .counter-value { color: var(--green); }
+
+.hero-scroll {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--gray);
+  letter-spacing: 1px;
+  animation: bounce 2s ease-in-out infinite;
+}
+
+@keyframes bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(6px); }
+}
+
+/* ═══════════════════════════════════════════
+   SECTION 2 — THE PROBLEM
+═══════════════════════════════════════════ */
+#problem { background: var(--navy-mid); }
+
+.split-code {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  margin-top: 40px;
+}
+
+.split-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  padding: 6px 12px;
+  border-radius: 4px;
+  margin-bottom: 12px;
+  display: inline-block;
+  letter-spacing: 1px;
+}
+
+.split-label.good { background: rgba(0,232,122,0.1); color: var(--green); }
+.split-label.bad  { background: rgba(255,77,106,0.1); color: var(--red); }
+
+.result-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 16px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 700;
+  padding: 10px 16px;
+  border-radius: 8px;
+}
+
+.result-badge.pass { background: rgba(0,232,122,0.1); color: var(--green); border: 1px solid rgba(0,232,122,0.2); }
+.result-badge.fail-hidden { background: rgba(255,77,106,0.1); color: var(--red); border: 1px solid rgba(255,77,106,0.2); }
+
+/* ═══════════════════════════════════════════
+   SECTION 3 — WHAT IS MUTATION TESTING
+═══════════════════════════════════════════ */
+#what { background: var(--navy); }
+
+.steps-flow {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  margin-top: 40px;
+  position: relative;
+}
+
+.steps-flow::before {
+  content: '';
+  position: absolute;
+  left: 28px;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: linear-gradient(to bottom, var(--blue), var(--green));
+  opacity: 0.3;
+}
+
+.step-row {
+  display: flex;
+  gap: 28px;
+  align-items: flex-start;
+  padding: 24px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+
+.step-row:last-child { border-bottom: none; }
+
+.step-num {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 700;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 2;
+}
+
+.step-num.blue  { background: rgba(77,159,255,0.15); color: var(--blue); border: 1px solid rgba(77,159,255,0.3); }
+.step-num.orange { background: rgba(255,140,66,0.15); color: var(--orange); border: 1px solid rgba(255,140,66,0.3); }
+.step-num.green { background: rgba(0,232,122,0.15); color: var(--green); border: 1px solid rgba(0,232,122,0.3); }
+
+.step-content { flex: 1; }
+
+.step-title {
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.step-desc {
+  color: var(--white-dim);
+  font-size: 15px;
+  line-height: 1.6;
+  margin-bottom: 16px;
+}
+
+/* ═══════════════════════════════════════════
+   SECTION 4 — KILL OR SURVIVE
+═══════════════════════════════════════════ */
+#outcomes { background: var(--navy-mid); }
+
+.outcome-demo {
+  margin-top: 40px;
+}
+
+.mutant-display {
+  margin-bottom: 24px;
+}
+
+.mutant-selector {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.mutant-btn {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  padding: 8px 16px;
+  border-radius: 6px;
+  border: 1px solid var(--gray-dark);
+  background: transparent;
+  color: var(--gray);
+  cursor: pointer;
+  letter-spacing: 0.5px;
+  transition: all 0.25s ease;
+}
+
+.mutant-btn.active {
+  background: rgba(255,140,66,0.15);
+  border-color: var(--orange);
+  color: var(--orange);
+}
+
+.mutant-btn:hover:not(.active) {
+  border-color: var(--gray);
+  color: var(--white);
+}
+
+.run-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  padding: 12px 28px;
+  border-radius: 8px;
+  border: none;
+  background: var(--green);
+  color: var(--navy);
+  cursor: pointer;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  transition: all 0.25s ease;
+  margin-top: 16px;
+}
+
+.run-btn:hover { background: var(--green-dim); transform: translateY(-1px); }
+
+.outcome-result {
+  margin-top: 24px;
+  padding: 24px;
+  border-radius: 12px;
+  display: none;
+  animation: slideIn 0.4s ease;
+}
+
+@keyframes slideIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.outcome-result.killed {
+  background: rgba(0,232,122,0.08);
+  border: 1px solid rgba(0,232,122,0.2);
+}
+
+.outcome-result.survived {
+  background: rgba(255,77,106,0.08);
+  border: 1px solid rgba(255,77,106,0.2);
+}
+
+.outcome-result.show { display: block; }
+
+.outcome-icon {
+  font-size: 32px;
+  margin-bottom: 12px;
+}
+
+.outcome-title {
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.outcome-desc {
+  color: var(--white-dim);
+  font-size: 15px;
+}
+
+/* ═══════════════════════════════════════════
+   SECTION 5 — ORACLE GAP
+═══════════════════════════════════════════ */
+#gap { background: var(--navy); }
+
+.formula-box {
+  background: var(--navy-card);
+  border: 1px solid rgba(255,140,66,0.2);
+  border-radius: 12px;
+  padding: 28px 36px;
+  font-family: var(--font-mono);
+  font-size: clamp(16px, 2.5vw, 22px);
+  text-align: center;
+  color: var(--orange);
+  margin-bottom: 48px;
+  letter-spacing: 1px;
+}
+
+.bars-container {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  max-width: 780px;
+}
+
+.bar-row {
+  display: grid;
+  grid-template-columns: 200px 1fr 60px;
+  align-items: center;
+  gap: 20px;
+}
+
+.bar-label { }
+
+.bar-label-title {
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 2px;
+}
+
+.bar-label-note {
+  font-size: 12px;
+  color: var(--gray);
+  font-family: var(--font-mono);
+}
+
+.bar-track {
+  background: rgba(255,255,255,0.05);
+  border-radius: 6px;
+  height: 36px;
+  overflow: hidden;
+  position: relative;
+}
+
+.bar-fill {
+  height: 100%;
+  border-radius: 6px;
+  width: 0;
+  transition: width 1.2s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  align-items: center;
+  padding-left: 12px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.bar-pct {
+  font-family: var(--font-mono);
+  font-size: 18px;
+  font-weight: 700;
+  text-align: right;
+}
+
+.bar-blue  .bar-fill { background: rgba(77,159,255,0.6); color: var(--white); }
+.bar-red   .bar-fill { background: rgba(255,77,106,0.6); color: var(--white); }
+.bar-orange .bar-fill { background: rgba(255,140,66,0.6); color: var(--white); }
+.bar-blue  .bar-pct { color: var(--blue); }
+.bar-red   .bar-pct { color: var(--red); }
+.bar-orange .bar-pct { color: var(--orange); }
+
+.gap-insight {
+  margin-top: 40px;
+  padding: 24px;
+  background: rgba(255,140,66,0.08);
+  border-left: 3px solid var(--orange);
+  border-radius: 0 8px 8px 0;
+  font-size: 16px;
+  color: var(--white-dim);
+  font-style: italic;
+}
+
+/* ═══════════════════════════════════════════
+   SECTION 6 — WHY TEAMS FAIL
+═══════════════════════════════════════════ */
+#barriers { background: var(--navy-mid); }
+
+.barriers-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+  margin-top: 40px;
+}
+
+.barrier-card {
+  background: var(--navy-card);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 12px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.barrier-card:hover { border-color: rgba(255,255,255,0.15); }
+
+.barrier-top {
+  padding: 24px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+
+.barrier-num {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 2px;
+  margin-bottom: 12px;
+}
+
+.barrier-title {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 700;
+  margin-bottom: 10px;
+}
+
+.barrier-body {
+  padding: 20px 24px;
+  font-size: 14px;
+  color: var(--white-dim);
+  line-height: 1.6;
+}
+
+.barrier-example {
+  margin-top: 14px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  padding: 10px;
+  background: rgba(0,0,0,0.2);
+  border-radius: 6px;
+}
+
+/* ═══════════════════════════════════════════
+   SECTION 7 — HOW AI HELPS
+═══════════════════════════════════════════ */
+#ai-helps { background: var(--navy); }
+
+.tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 32px;
+  flex-wrap: wrap;
+}
+
+.tab-btn {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  padding: 10px 20px;
+  border-radius: 8px;
+  border: 1px solid var(--gray-dark);
+  background: transparent;
+  color: var(--gray);
+  cursor: pointer;
+  letter-spacing: 0.5px;
+  transition: all 0.25s ease;
+}
+
+.tab-btn.active {
+  background: rgba(0,232,122,0.12);
+  border-color: var(--green);
+  color: var(--green);
+}
+
+.tab-btn:hover:not(.active) {
+  border-color: var(--gray);
+  color: var(--white-dim);
+}
+
+.tab-content { display: none; }
+.tab-content.active { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; animation: fadeIn 0.4s ease; }
+
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+.tab-info {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.tab-title {
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: 700;
+}
+
+.tab-desc {
+  color: var(--white-dim);
+  font-size: 15px;
+  line-height: 1.7;
+}
+
+.tab-solves {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--green);
+  padding: 8px 14px;
+  background: rgba(0,232,122,0.08);
+  border-radius: 6px;
+  display: inline-block;
+  letter-spacing: 0.5px;
+}
+
+/* ═══════════════════════════════════════════
+   SECTION 8 — RISK FACTORS
+═══════════════════════════════════════════ */
+#risks { background: var(--navy-mid); }
+
+.risk-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+  margin-top: 40px;
+}
+
+.risk-card {
+  background: var(--navy-card);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 12px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.risk-card:hover {
+  border-color: rgba(255,255,255,0.15);
+  transform: translateY(-2px);
+}
+
+.risk-card-top {
+  padding: 20px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.risk-num {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 1px;
+  opacity: 0.6;
+}
+
+.risk-title {
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.risk-sub {
+  font-size: 13px;
+  color: var(--gray);
+}
+
+.risk-expand-icon {
+  font-size: 18px;
+  color: var(--gray);
+  transition: transform 0.3s ease;
+  flex-shrink: 0;
+}
+
+.risk-card.expanded .risk-expand-icon { transform: rotate(45deg); }
+
+.risk-detail {
+  display: none;
+  padding: 0 20px 20px;
+  border-top: 1px solid rgba(255,255,255,0.05);
+  margin-top: 0;
+}
+
+.risk-card.expanded .risk-detail { display: block; }
+
+.risk-prompt {
+  margin-top: 16px;
+  background: rgba(0,0,0,0.3);
+  border-radius: 8px;
+  padding: 14px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--orange);
+  line-height: 1.6;
+  border-left: 2px solid var(--orange);
+}
+
+.risk-prompt-label {
+  font-size: 10px;
+  letter-spacing: 1px;
+  color: var(--gray);
+  margin-bottom: 6px;
+}
+
+/* ═══════════════════════════════════════════
+   SECTION 9 — FULL PIPELINE
+═══════════════════════════════════════════ */
+#pipeline { background: var(--navy); }
+
+.pipeline-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  margin-top: 40px;
+  position: relative;
+}
+
+.pipeline-phase {
+  padding: 32px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+
+.pipeline-phase:last-child { border-bottom: none; }
+
+.phase-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 20px;
+  cursor: pointer;
+}
+
+.phase-badge {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  padding: 4px 12px;
+  border-radius: 20px;
+  letter-spacing: 1px;
+}
+
+.phase-title {
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 700;
+  flex: 1;
+}
+
+.phase-toggle {
+  font-size: 20px;
+  color: var(--gray);
+  transition: transform 0.3s ease;
+}
+
+.pipeline-phase.open .phase-toggle { transform: rotate(180deg); }
+
+.phase-content {
+  display: none;
+}
+
+.pipeline-phase.open .phase-content { display: block; }
+
+.gate-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.gate-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 16px;
+  background: rgba(255,255,255,0.03);
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.05);
+}
+
+.gate-num {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.gate-num.discard { background: rgba(255,77,106,0.15); color: var(--red); }
+.gate-num.keep    { background: rgba(0,232,122,0.15);  color: var(--green); }
+
+.gate-desc {
+  font-size: 14px;
+  color: var(--white-dim);
+  line-height: 1.5;
+}
+
+.gate-rule {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--gray);
+  margin-top: 4px;
+}
+
+/* ═══════════════════════════════════════════
+   SECTION 10 — DECISION MATRIX
+═══════════════════════════════════════════ */
+#matrix { background: var(--navy-mid); }
+
+.matrix-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 40px;
+  font-size: 14px;
+}
+
+.matrix-table th {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 2px;
+  color: var(--gray);
+  padding: 14px 20px;
+  text-align: left;
+  border-bottom: 1px solid var(--gray-dark);
+  background: rgba(255,255,255,0.02);
+}
+
+.matrix-table td {
+  padding: 18px 20px;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  vertical-align: middle;
+}
+
+.matrix-table tr:last-child td { border-bottom: none; }
+
+.matrix-table tr { transition: background 0.2s ease; }
+.matrix-table tr:hover td { background: rgba(255,255,255,0.02); }
+
+.matrix-table tr.winner td { background: rgba(0,232,122,0.05); }
+.matrix-table tr.winner:hover td { background: rgba(0,232,122,0.08); }
+
+.mono-val {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.badge-keep    { background: rgba(0,232,122,0.12); color: var(--green); padding: 4px 12px; border-radius: 4px; font-family: var(--font-mono); font-size: 11px; display: inline-block; }
+.badge-discard { background: rgba(255,77,106,0.12); color: var(--red);   padding: 4px 12px; border-radius: 4px; font-family: var(--font-mono); font-size: 11px; display: inline-block; }
+.badge-fix     { background: rgba(255,140,66,0.12); color: var(--orange); padding: 4px 12px; border-radius: 4px; font-family: var(--font-mono); font-size: 11px; display: inline-block; }
+
+.condition-box {
+  margin-top: 40px;
+  padding: 28px 36px;
+  background: rgba(0,232,122,0.06);
+  border: 1px solid rgba(0,232,122,0.2);
+  border-radius: 12px;
+  text-align: center;
+}
+
+.condition-box .label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--green);
+  letter-spacing: 2px;
+  margin-bottom: 12px;
+}
+
+.condition-box .rule {
+  font-family: var(--font-display);
+  font-size: clamp(18px, 3vw, 28px);
+  font-weight: 700;
+  color: var(--white);
+}
+
+.condition-box .rule .pass-code { color: var(--green); }
+.condition-box .rule .fail-code { color: var(--red); }
+
+/* ═══════════════════════════════════════════
+   SECTION 11 — CTA
+═══════════════════════════════════════════ */
+#cta {
+  background: var(--navy);
+  text-align: center;
+  min-height: 60vh;
+  justify-content: center;
+  align-items: center;
+}
+
+.cta-inner {
+  max-width: 700px;
+  margin: 0 auto;
+}
+
+.cta-title {
+  font-size: clamp(36px, 6vw, 72px);
+  font-weight: 800;
+  line-height: 1.1;
+  margin-bottom: 24px;
+}
+
+.cta-title .green { color: var(--green); }
+.cta-title .red   { color: var(--red); }
+
+.cta-question {
+  font-size: clamp(20px, 3vw, 32px);
+  color: var(--white-dim);
+  margin-bottom: 48px;
+  font-style: italic;
+  font-family: var(--font-display);
+}
+
+.cta-divider {
+  width: 60px;
+  height: 2px;
+  background: var(--green);
+  margin: 0 auto 32px;
+}
+
+.metrics-strip {
+  display: flex;
+  justify-content: center;
+  gap: 48px;
+  padding: 28px;
+  background: var(--navy-card);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 12px;
+}
+
+.metric-item { text-align: center; }
+
+.metric-val {
+  font-family: var(--font-display);
+  font-size: 32px;
+  font-weight: 800;
+  margin-bottom: 4px;
+}
+
+.metric-key {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--gray);
+  letter-spacing: 1px;
+}
+
+/* ═══════════════════════════════════════════
+   PROGRESS BAR
+═══════════════════════════════════════════ */
+.progress-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 2px;
+  background: var(--green);
+  z-index: 200;
+  transition: width 0.1s linear;
+  box-shadow: 0 0 8px var(--green);
+}
+
+/* ═══════════════════════════════════════════
+   RESPONSIVE
+═══════════════════════════════════════════ */
+@media (max-width: 900px) {
+  section { padding: 60px 24px 60px 24px; }
+  .nav { display: none; }
+  .split-code { grid-template-columns: 1fr; }
+  .barriers-grid { grid-template-columns: 1fr; }
+  .tab-content.active { grid-template-columns: 1fr; }
+  .bar-row { grid-template-columns: 140px 1fr 50px; }
+  .metrics-strip { gap: 24px; flex-wrap: wrap; }
+  .matrix-table { font-size: 12px; }
+  .matrix-table th, .matrix-table td { padding: 12px; }
+}
+
+@media (max-width: 600px) {
+  .counter-strip { flex-direction: column; }
+  .counter-item { border-right: none; border-bottom: 1px solid var(--gray-dark); }
+  .counter-item:last-child { border-bottom: none; }
+  .bar-row { grid-template-columns: 1fr; gap: 8px; }
+  .bar-label-note { display: none; }
+  .risk-grid { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<!-- PROGRESS BAR -->
+<div class="progress-bar" id="progressBar"></div>
+
+<!-- NAV -->
+<nav class="nav" id="sideNav">
+  <a class="nav-item active" href="#hero"     data-section="hero">     <span class="nav-dot"></span><span class="nav-label">INTRO</span></a>
+  <a class="nav-item"        href="#problem"  data-section="problem">  <span class="nav-dot"></span><span class="nav-label">THE PROBLEM</span></a>
+  <a class="nav-item"        href="#what"     data-section="what">     <span class="nav-dot"></span><span class="nav-label">WHAT IS IT</span></a>
+  <a class="nav-item"        href="#outcomes" data-section="outcomes"> <span class="nav-dot"></span><span class="nav-label">OUTCOMES</span></a>
+  <a class="nav-item"        href="#gap"      data-section="gap">      <span class="nav-dot"></span><span class="nav-label">ORACLE GAP</span></a>
+  <a class="nav-item"        href="#barriers" data-section="barriers"> <span class="nav-dot"></span><span class="nav-label">BARRIERS</span></a>
+  <a class="nav-item"        href="#ai-helps" data-section="ai-helps"> <span class="nav-dot"></span><span class="nav-label">AI SOLUTION</span></a>
+  <a class="nav-item"        href="#risks"    data-section="risks">    <span class="nav-dot"></span><span class="nav-label">RISK FACTORS</span></a>
+  <a class="nav-item"        href="#pipeline" data-section="pipeline"> <span class="nav-dot"></span><span class="nav-label">PIPELINE</span></a>
+  <a class="nav-item"        href="#matrix"   data-section="matrix">   <span class="nav-dot"></span><span class="nav-label">MATRIX</span></a>
+  <a class="nav-item"        href="#cta"      data-section="cta">      <span class="nav-dot"></span><span class="nav-label">THE QUESTION</span></a>
+</nav>
+
+<!-- ═══════════════════════════════════════════
+     SECTION 1 — HERO
+═══════════════════════════════════════════ -->
+<section id="hero">
+  <div class="hero-bg">
+    <div class="hero-blob hero-blob-1"></div>
+    <div class="hero-blob hero-blob-2"></div>
+  </div>
+  <div class="section-inner hero-content">
+    <div class="hero-kicker reveal">A GARTNER FRAMEWORK BREAKDOWN</div>
+    <h1 class="hero-title reveal reveal-delay-1">
+      AI Mutation<br>
+      <span class="accent">Testing</span><br>
+      <span class="muted">Explained.</span>
+    </h1>
+    <p class="hero-subtitle reveal reveal-delay-2">
+      Most engineering teams measure code coverage and call it done.
+      Here's what they're missing — and the framework that fixes it.
+    </p>
+    <div class="counter-strip reveal reveal-delay-3">
+      <div class="counter-item safe">
+        <div class="counter-label">CODE COVERAGE</div>
+        <div class="counter-value" data-count="95" data-suffix="%">0%</div>
+        <div class="counter-note">Tests RUN this code</div>
+      </div>
+      <div class="counter-item danger">
+        <div class="counter-label">MUTATION SCORE</div>
+        <div class="counter-value" data-count="40" data-suffix="%">0%</div>
+        <div class="counter-note">Tests PROTECT this code</div>
+      </div>
+      <div class="counter-item warn">
+        <div class="counter-label">ORACLE GAP</div>
+        <div class="counter-value" data-count="55" data-suffix="pt">0pt</div>
+        <div class="counter-note">Where bugs hide</div>
+      </div>
+    </div>
+    <div class="hero-scroll reveal reveal-delay-4">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
+      SCROLL TO EXPLORE
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════
+     SECTION 2 — THE PROBLEM
+═══════════════════════════════════════════ -->
+<section id="problem">
+  <div class="section-inner">
+    <div class="eyebrow reveal" style="color: var(--red)">THE PROBLEM</div>
+    <h2 class="section-title reveal reveal-delay-1">
+      Green tests <span style="color:var(--red)">≠</span> safe code
+    </h2>
+    <p class="section-subtitle reveal reveal-delay-2">
+      Your tests can pass — all green, 95% coverage — while a critical bug ships to production undetected. Here's a real Next.js example showing exactly how.
+    </p>
+    <div class="split-code reveal reveal-delay-3">
+      <div>
+        <span class="split-label good">✓ YOUR TEST</span>
+        <div class="code-block">
+          <div class="code-header">
+            <div class="code-dots"><span></span><span></span><span></span></div>
+            <span class="code-filename">checkout.test.js</span>
+            <button class="code-copy" onclick="copyCode(this)">COPY</button>
+          </div>
+          <div class="code-body"><span class="cmt">// What most teams write</span>
+<span class="fn">test</span>(<span class="str">'checkout returns 200'</span>, <span class="kw">async</span> () => {
+  <span class="kw">const</span> res = <span class="kw">await</span> <span class="fn">POST</span>(<span class="str">'/api/checkout'</span>, {
+    price: <span class="num">100</span>,
+    userType: <span class="str">'premium'</span>
+  });
+
+  <span class="cmt">// Only checks status code</span>
+  <span class="fn">expect</span>(res.status).<span class="fn">toBe</span>(<span class="num">200</span>); <span class="val">✓</span>
+});</div>
+        </div>
+        <div class="result-badge pass">
+          <span>✓</span> TEST PASSES — all green
+        </div>
+      </div>
+      <div>
+        <span class="split-label bad">⚠ MUTANT CODE (PRODUCTION BUG)</span>
+        <div class="code-block">
+          <div class="code-header">
+            <div class="code-dots"><span></span><span></span><span></span></div>
+            <span class="code-filename">checkout.js (mutant)</span>
+            <button class="code-copy" onclick="copyCode(this)">COPY</button>
+          </div>
+          <div class="code-body"><span class="cmt">// Bug: + instead of * operator</span>
+<span class="kw">if</span> (userType === <span class="str">'premium'</span>) {
+  <span class="kw">const</span> discountedPrice =
+    price <span class="mut">+ 0.8</span>; <span class="err">// ← BUG: was * 0.8</span>
+  <span class="kw">return</span> res.<span class="num">200</span>.<span class="fn">json</span>({
+    total: discountedPrice
+  });
+  <span class="cmt">// Returns 100.8 not 80!</span>
+}</div>
+        </div>
+        <div class="result-badge fail-hidden">
+          <span>😱</span> TEST STILL PASSES — bug ships!
+        </div>
+      </div>
+    </div>
+    <div class="gap-insight reveal reveal-delay-4" style="margin-top: 32px;">
+      The test checked <em>that</em> a response came back. It never checked <em>what value</em> was returned. That's the gap between coverage and protection.
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════
+     SECTION 3 — WHAT IS MUTATION TESTING
+═══════════════════════════════════════════ -->
+<section id="what">
+  <div class="section-inner">
+    <div class="eyebrow reveal" style="color: var(--green)">THE DEFINITION</div>
+    <h2 class="section-title reveal reveal-delay-1">What is<br>Mutation Testing?</h2>
+    <p class="section-subtitle reveal reveal-delay-2">
+      A technique to identify weaknesses in your test suite by introducing small, intentional changes called <strong style="color:var(--orange)">mutants</strong> — each simulating a potential real-world defect.
+    </p>
+    <div class="steps-flow">
+      <div class="step-row reveal reveal-delay-1">
+        <div class="step-num blue">01</div>
+        <div class="step-content">
+          <div class="step-title">Start with your source code</div>
+          <div class="step-desc">Take the code under test — a Next.js API route, a Node.js service, a utility function.</div>
+          <div class="code-block" style="margin-top:12px">
+            <div class="code-header"><div class="code-dots"><span></span><span></span><span></span></div><span class="code-filename">pages/api/checkout.js</span><button class="code-copy" onclick="copyCode(this)">COPY</button></div>
+            <div class="code-body"><span class="kw">export default function</span> <span class="fn">handler</span>(req, res) {
+  <span class="kw">const</span> { price, userType } = req.body;
+  <span class="kw">if</span> (userType === <span class="str">'premium'</span>) {
+    <span class="kw">return</span> res.<span class="fn">json</span>({ total: price <span class="val">* 0.8</span> });
+  }
+  <span class="kw">return</span> res.<span class="fn">json</span>({ total: price });
+}</div>
+          </div>
+        </div>
+      </div>
+      <div class="step-row reveal reveal-delay-2">
+        <div class="step-num orange">02</div>
+        <div class="step-content">
+          <div class="step-title">AI introduces a mutant</div>
+          <div class="step-desc">One small, surgical, realistic change. Simulates the exact kind of mistake a real developer makes.</div>
+          <div class="code-block" style="margin-top:12px">
+            <div class="code-header"><div class="code-dots"><span></span><span></span><span></span></div><span class="code-filename">pages/api/checkout.js (MUTANT)</span><button class="code-copy" onclick="copyCode(this)">COPY</button></div>
+            <div class="code-body"><span class="kw">export default function</span> <span class="fn">handler</span>(req, res) {
+  <span class="kw">const</span> { price, userType } = req.body;
+  <span class="kw">if</span> (userType === <span class="str">'premium'</span>) {
+    <span class="kw">return</span> res.<span class="fn">json</span>({ total: price <span class="mut">+ 0.8</span> }); <span class="err">← mutated</span>
+  }
+  <span class="kw">return</span> res.<span class="fn">json</span>({ total: price });
+}</div>
+          </div>
+        </div>
+      </div>
+      <div class="step-row reveal reveal-delay-3">
+        <div class="step-num green">03</div>
+        <div class="step-content">
+          <div class="step-title">Run your existing tests against it</div>
+          <div class="step-desc">The same tests you already have. No new test infrastructure needed. The question: does any test catch the mutation?</div>
+          <div style="display:flex; gap:16px; margin-top:12px; flex-wrap:wrap;">
+            <div style="flex:1; min-width:200px; padding:16px; background:rgba(0,232,122,0.08); border:1px solid rgba(0,232,122,0.2); border-radius:8px;">
+              <div style="font-family:var(--font-mono); font-size:11px; color:var(--green); margin-bottom:6px;">MUTANT KILLED ✓</div>
+              <div style="font-size:13px; color:var(--white-dim);">Test fails on mutant → your test suite is <strong style="color:var(--green)">robust</strong> here</div>
+            </div>
+            <div style="flex:1; min-width:200px; padding:16px; background:rgba(255,77,106,0.08); border:1px solid rgba(255,77,106,0.2); border-radius:8px;">
+              <div style="font-family:var(--font-mono); font-size:11px; color:var(--red); margin-bottom:6px;">MUTANT SURVIVED ✗</div>
+              <div style="font-size:13px; color:var(--white-dim);">Test passes on mutant → your test suite has a <strong style="color:var(--red)">blind spot</strong></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════
+     SECTION 4 — KILL OR SURVIVE
+═══════════════════════════════════════════ -->
+<section id="outcomes">
+  <div class="section-inner">
+    <div class="eyebrow reveal" style="color: var(--blue)">INTERACTIVE DEMO</div>
+    <h2 class="section-title reveal reveal-delay-1">
+      <span style="color:var(--green)">Kill</span> or <span style="color:var(--red)">Survive</span>
+    </h2>
+    <p class="section-subtitle reveal reveal-delay-2">
+      Select a mutant, then run your tests to see the outcome. Each mutant represents a real Node.js/Next.js defect pattern.
+    </p>
+    <div class="outcome-demo reveal reveal-delay-3">
+      <div class="mutant-selector">
+        <button class="mutant-btn active" onclick="selectMutant(0, this)">MUTANT 1: Wrong operator</button>
+        <button class="mutant-btn" onclick="selectMutant(1, this)">MUTANT 2: Removed auth check</button>
+        <button class="mutant-btn" onclick="selectMutant(2, this)">MUTANT 3: Silent timeout</button>
+      </div>
+      <div id="mutantCode" class="code-block">
+        <div class="code-header"><div class="code-dots"><span></span><span></span><span></span></div><span class="code-filename" id="mutantFile">checkout.js</span><button class="code-copy" onclick="copyCode(this)">COPY</button></div>
+        <div class="code-body" id="mutantBody"></div>
+      </div>
+      <button class="run-btn" onclick="runTests()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+        RUN TESTS
+      </button>
+      <div id="outcomeResult" class="outcome-result">
+        <div class="outcome-icon" id="outcomeIcon"></div>
+        <div class="outcome-title" id="outcomeTitle"></div>
+        <div class="outcome-desc" id="outcomeDesc"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════
+     SECTION 5 — ORACLE GAP
+═══════════════════════════════════════════ -->
+<section id="gap">
+  <div class="section-inner">
+    <div class="eyebrow reveal" style="color: var(--orange)">THE KEY METRIC</div>
+    <h2 class="section-title reveal reveal-delay-1">The Oracle Gap</h2>
+    <p class="section-subtitle reveal reveal-delay-2">
+      The single number that exposes how much false confidence your team has built up around test coverage.
+    </p>
+    <div class="formula-box reveal reveal-delay-3">
+      Oracle Gap = Code Coverage % &minus; Mutation Score %
+    </div>
+    <div class="bars-container">
+      <div class="bar-row bar-blue reveal reveal-delay-1">
+        <div class="bar-label">
+          <div class="bar-label-title">Code Coverage</div>
+          <div class="bar-label-note">Tests RUN this code</div>
+        </div>
+        <div class="bar-track">
+          <div class="bar-fill" data-width="95">95%</div>
+        </div>
+        <div class="bar-pct">95%</div>
+      </div>
+      <div class="bar-row bar-red reveal reveal-delay-2">
+        <div class="bar-label">
+          <div class="bar-label-title">Mutation Score</div>
+          <div class="bar-label-note">Tests VERIFY this code</div>
+        </div>
+        <div class="bar-track">
+          <div class="bar-fill" data-width="40">40%</div>
+        </div>
+        <div class="bar-pct">40%</div>
+      </div>
+      <div class="bar-row bar-orange reveal reveal-delay-3">
+        <div class="bar-label">
+          <div class="bar-label-title">Oracle Gap</div>
+          <div class="bar-label-note">Where bugs HIDE</div>
+        </div>
+        <div class="bar-track">
+          <div class="bar-fill" data-width="55">55 pts</div>
+        </div>
+        <div class="bar-pct">55pt</div>
+      </div>
+    </div>
+    <div class="gap-insight reveal reveal-delay-4" style="max-width:780px">
+      55 points of false confidence. Every point in this gap represents code that <em>runs</em> during tests but is never actually <em>verified</em>. That's where production bugs live comfortably.
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════
+     SECTION 6 — WHY TEAMS FAIL
+═══════════════════════════════════════════ -->
+<section id="barriers">
+  <div class="section-inner">
+    <div class="eyebrow reveal" style="color: var(--red)">3 BARRIERS TO ADOPTION</div>
+    <h2 class="section-title reveal reveal-delay-1">Why teams give up</h2>
+    <p class="section-subtitle reveal reveal-delay-2">
+      Mutation testing has been around since the 1970s. It hasn't been widely adopted for three very specific reasons — all of which AI directly addresses.
+    </p>
+    <div class="barriers-grid">
+      <div class="barrier-card reveal reveal-delay-1">
+        <div class="barrier-top">
+          <div class="barrier-num" style="color:var(--orange)">01 — VOLUME</div>
+          <div class="barrier-title">Too many ways to change code</div>
+          <div style="font-size:14px; color:var(--white-dim); margin-top:8px; line-height:1.6;">One function generates 50+ possible mutants. A 10,000-line codebase = potentially millions. Impossible to handle manually.</div>
+        </div>
+        <div class="barrier-body">
+          <div class="code-block" style="font-size:12px;">
+            <div class="code-header"><div class="code-dots"><span></span><span></span><span></span></div><span class="code-filename">validateAge.js</span></div>
+            <div class="code-body"><span class="cmt">// Original</span>
+<span class="kw">if</span> (age >= <span class="num">18</span> && age <= <span class="num">100</span>)
+
+<span class="cmt">// 8+ possible mutants:</span>
+<span class="kw">if</span> (age <span class="mut">> 18</span> && age <= <span class="num">100</span>)   <span class="cmt">// 1</span>
+<span class="kw">if</span> (age >= <span class="num">18</span> && age <span class="mut">< 100</span>)  <span class="cmt">// 2</span>
+<span class="kw">if</span> (age >= <span class="num">18</span> <span class="mut">||</span> age <= <span class="num">100</span>) <span class="cmt">// 3</span>
+<span class="cmt">// ...and many more</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="barrier-card reveal reveal-delay-2">
+        <div class="barrier-top">
+          <div class="barrier-num" style="color:var(--blue)">02 — NOISE</div>
+          <div class="barrier-title">Equivalent mutants</div>
+          <div style="font-size:14px; color:var(--white-dim); margin-top:8px; line-height:1.6;">Some mutations produce code that behaves identically. They can never be killed — no test can distinguish them. Reviewing them wastes hours.</div>
+        </div>
+        <div class="barrier-body">
+          <div class="code-block" style="font-size:12px;">
+            <div class="code-header"><div class="code-dots"><span></span><span></span><span></span></div><span class="code-filename">discount.js</span></div>
+            <div class="code-body"><span class="cmt">// Original</span>
+price - (price * <span class="num">0.1</span>)
+
+<span class="cmt">// Equivalent mutant</span>
+price <span class="mut">* 0.9</span>
+
+<span class="cmt">// Same result for ALL inputs.</span>
+<span class="cmt">// No test can ever kill this.</span>
+<span class="cmt">// Pure noise → wastes review time.</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="barrier-card reveal reveal-delay-3">
+        <div class="barrier-top">
+          <div class="barrier-num" style="color:var(--red)">03 — OVERWHELM</div>
+          <div class="barrier-title">Too many to analyse</div>
+          <div style="font-size:14px; color:var(--white-dim); margin-top:8px; line-height:1.6;">Even after filtering, thousands of mutants remain. Teams spend more time reviewing mutation results than writing actual features.</div>
+        </div>
+        <div class="barrier-body">
+          <div style="padding: 16px; background: rgba(255,77,106,0.06); border-radius: 8px; border: 1px solid rgba(255,77,106,0.15); font-family: var(--font-mono); font-size: 12px; color: var(--white-dim); line-height: 1.8;">
+            <span style="color:var(--gray)">// Real team scenario</span><br>
+            mutants_generated: <span style="color:var(--orange)">8,247</span><br>
+            reviewed_yesterday: <span style="color:var(--red)">47</span><br>
+            days_to_complete: <span style="color:var(--red)">175</span><br>
+            team_morale: <span style="color:var(--red)">"abandoned"</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════
+     SECTION 7 — HOW AI HELPS
+═══════════════════════════════════════════ -->
+<section id="ai-helps">
+  <div class="section-inner">
+    <div class="eyebrow reveal" style="color: var(--green)">THE AI SOLUTION</div>
+    <h2 class="section-title reveal reveal-delay-1">4 things AI does<br>automatically</h2>
+    <p class="section-subtitle reveal reveal-delay-2">
+      Each capability directly addresses one of the three barriers. Together they make mutation testing viable at any scale.
+    </p>
+    <div class="tabs reveal reveal-delay-3">
+      <button class="tab-btn active" onclick="switchTab(0, this)">01 GENERATE</button>
+      <button class="tab-btn" onclick="switchTab(1, this)">02 FILTER</button>
+      <button class="tab-btn" onclick="switchTab(2, this)">03 STRENGTHEN</button>
+      <button class="tab-btn" onclick="switchTab(3, this)">04 FILL GAPS</button>
+    </div>
+    <div class="tab-content active" id="tab-0">
+      <div class="tab-info">
+        <div class="tab-title">Generate Mutants</div>
+        <div class="tab-desc">AI generates targeted mutants based on your code, risk factors, and past bug history — not random changes. The prompt includes code context, risk category, and recent issues to produce only meaningful defect simulations.</div>
+        <div class="tab-solves">↑ SOLVES: Too many ways to change code manually</div>
+      </div>
+      <div class="code-block">
+        <div class="code-header"><div class="code-dots"><span></span><span></span><span></span></div><span class="code-filename">LLM prompt (mutant generation)</span><button class="code-copy" onclick="copyCode(this)">COPY</button></div>
+        <div class="code-body"><span class="cmt">## Task</span>
+Rewrite the code to introduce a realistic,
+buildable defect targeting risk factors:
+<span class="val">{Data Security / Compliance, Integrations}</span>
+
+<span class="cmt">## Instructions</span>
+1. Focus on the risk areas mentioned
+2. Avoid trivial checks and whitespace changes
+3. Only modify the implementation
+4. Preserve method signatures
+5. Output valid, complete code only
+
+<span class="cmt">## Risk Factors</span>
+- <span class="str">Data Security / Compliance</span>
+- <span class="str">Integrations</span>
+
+<span class="cmt">## Recent Issues</span>
+- PII logged in plain text
+- Timeout mishandling in payment integration</div>
+      </div>
+    </div>
+    <div class="tab-content" id="tab-1">
+      <div class="tab-info">
+        <div class="tab-title">Remove Equivalent Mutants</div>
+        <div class="tab-desc">AI performs semantic equivalence detection using abstract syntax tree comparison, static analysis, and a dedicated LLM semantic check. It returns a 3-way verdict — Equivalent, Not Equivalent, or Uncertain — so humans only review genuinely ambiguous cases.</div>
+        <div class="tab-solves">↑ SOLVES: Equivalent mutant noise wasting review time</div>
+      </div>
+      <div class="code-block">
+        <div class="code-header"><div class="code-dots"><span></span><span></span><span></span></div><span class="code-filename">LLM prompt (equivalence detection)</span><button class="code-copy" onclick="copyCode(this)">COPY</button></div>
+        <div class="code-body"><span class="cmt">## Task</span>
+Compare these two snippets and determine if they
+are semantically equivalent for ALL inputs.
+
+<span class="cmt">## Instructions</span>
+1. Ignore comments, whitespace, formatting
+2. Focus only on behavior, outputs, side effects
+3. If not equivalent, provide a concrete
+   differentiating input example
+4. If uncertain, state what info is needed
+
+<span class="cmt">## Output Format</span>
+<span class="key">Verdict:</span> <span class="val">[Equivalent / Not Equivalent / Uncertain]</span>
+<span class="key">Explanation:</span> [Rationale]
+<span class="key">Differentiating Input:</span> [Example if not equiv]</div>
+      </div>
+    </div>
+    <div class="tab-content" id="tab-2">
+      <div class="tab-info">
+        <div class="tab-title">Strengthen Existing Tests</div>
+        <div class="tab-desc">When a mutant survives an existing test, AI takes the weak test and rewrites it to be stronger — adding precise assertions that specifically target the behavioral difference introduced by the mutant, without changing unrelated parts of the test.</div>
+        <div class="tab-solves">↑ SOLVES: Weak tests that run code but don't verify it</div>
+      </div>
+      <div class="code-block">
+        <div class="code-header"><div class="code-dots"><span></span><span></span><span></span></div><span class="code-filename">LLM prompt (strengthen existing test)</span><button class="code-copy" onclick="copyCode(this)">COPY</button></div>
+        <div class="code-body"><span class="cmt">## Task</span>
+Update the Existing Test so it:
+- <span class="val">PASSES</span> on Original Code
+- <span class="err">FAILS</span> on Mutant Code
+
+<span class="cmt">## Instructions</span>
+1. Strengthen assertions to detect the mutation
+2. Add/modify test data to expose the defect
+3. Preserve method name, signature, structure
+4. Do not change unrelated assertions
+5. Output complete updated test method only
+
+<span class="cmt">## Original Code</span>  [Insert code]
+<span class="cmt">## Mutant Code</span>    [Insert mutant]
+<span class="cmt">## Existing Test</span>   [Insert test]</div>
+      </div>
+    </div>
+    <div class="tab-content" id="tab-3">
+      <div class="tab-info">
+        <div class="tab-title">Generate Missing Test Cases</div>
+        <div class="tab-desc">When no test covers a mutated code path at all, AI writes a brand new test case from scratch — following your existing naming conventions, targeting the exact defect introduced, and including realistic test data that exposes the mutation.</div>
+        <div class="tab-solves">↑ SOLVES: Blind spots with zero test coverage</div>
+      </div>
+      <div class="code-block">
+        <div class="code-header"><div class="code-dots"><span></span><span></span><span></span></div><span class="code-filename">LLM prompt (generate new test)</span><button class="code-copy" onclick="copyCode(this)">COPY</button></div>
+        <div class="code-body"><span class="cmt">## Task</span>
+Write a new unit test that:
+- <span class="val">PASSES</span> on Original Code
+- <span class="err">FAILS</span> on Mutant Code
+
+<span class="cmt">## Instructions</span>
+1. Exercise the behavioral difference specifically
+2. Use precise assertions for the exact defect
+3. Focus on specified risk factors
+4. Include realistic test data
+5. Follow existing test naming conventions
+6. Output complete valid test method only
+
+<span class="cmt">## Risk Factors</span>  [Insert risk factors]
+<span class="cmt">## Original Code</span>  [Insert code]
+<span class="cmt">## Mutant Code</span>    [Insert mutant]</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════
+     SECTION 8 — RISK FACTORS
+═══════════════════════════════════════════ -->
+<section id="risks">
+  <div class="section-inner">
+    <div class="eyebrow reveal" style="color: var(--blue)">WHERE BUGS HIDE</div>
+    <h2 class="section-title reveal reveal-delay-1">7 Risk Factors</h2>
+    <p class="section-subtitle reveal reveal-delay-2">
+      Risk factors are the hints you give AI about where to focus mutation generation. Click each to see the definition, a real Next.js/Node.js example, and the exact prompt addition Gartner recommends.
+    </p>
+    <div class="risk-grid">
+
+      <div class="risk-card reveal reveal-delay-1" onclick="toggleRisk(this)" style="border-top: 2px solid var(--red)">
+        <div class="risk-card-top">
+          <div>
+            <div class="risk-num" style="color:var(--red)">01</div>
+            <div class="risk-title">Data Security</div>
+            <div class="risk-sub">Auth, PII, tokens, permissions</div>
+          </div>
+          <div class="risk-expand-icon">+</div>
+        </div>
+        <div class="risk-detail">
+          <div style="font-size:14px; color:var(--white-dim); margin-bottom:16px; line-height:1.6;">Risks from mishandling sensitive data or authentication/authorization logic — the highest-impact category.</div>
+          <div class="code-block" style="font-size:12px;">
+            <div class="code-header"><div class="code-dots"><span></span><span></span><span></span></div><span class="code-filename">pages/api/auth/login.js</span></div>
+            <div class="code-body"><span class="cmt">// AI targets this area:</span>
+<span class="kw">const</span> passwordMatch = <span class="kw">await</span> bcrypt.<span class="fn">compare</span>(
+  password, user.passwordHash
+);
+<span class="kw">if</span> (!passwordMatch)
+  <span class="kw">return</span> res.<span class="num">401</span>.<span class="fn">json</span>({<span class="key">error</span>: <span class="str">'Invalid'</span>});
+
+<span class="cmt">// 🧬 Mutant: passwordMatch = true (bypass)</span>
+<span class="cmt">// 🧬 Mutant: removes the ! (inverts logic)</span></div>
+          </div>
+          <div class="risk-prompt">
+            <div class="risk-prompt-label">PROMPT ADDITION</div>
+            "Insert defect that logs sensitive data, bypasses authentication, or inverts authorization logic."
+          </div>
+        </div>
+      </div>
+
+      <div class="risk-card reveal reveal-delay-2" onclick="toggleRisk(this)" style="border-top: 2px solid var(--orange)">
+        <div class="risk-card-top">
+          <div>
+            <div class="risk-num" style="color:var(--orange)">02</div>
+            <div class="risk-title">Integrations</div>
+            <div class="risk-sub">APIs, payment gateways, timeouts</div>
+          </div>
+          <div class="risk-expand-icon">+</div>
+        </div>
+        <div class="risk-detail">
+          <div style="font-size:14px; color:var(--white-dim); margin-bottom:16px; line-height:1.6;">Risks from external systems — Stripe, email services, inventory APIs. Especially timeout and error code handling.</div>
+          <div class="code-block" style="font-size:12px;">
+            <div class="code-header"><div class="code-dots"><span></span><span></span><span></span></div><span class="code-filename">services/payment.js</span></div>
+            <div class="code-body"><span class="kw">const</span> charge = <span class="kw">await</span> stripe.charges.<span class="fn">create</span>({...});
+
+<span class="cmt">// AI targets this check:</span>
+<span class="kw">if</span> (charge.status !== <span class="str">'succeeded'</span>) {
+  <span class="kw">throw new</span> <span class="fn">Error</span>(<span class="str">'Payment failed'</span>);
+}
+
+<span class="cmt">// 🧬 Mutant: removes status check</span>
+<span class="cmt">// 🧬 Mutant: swallows timeout error silently</span></div>
+          </div>
+          <div class="risk-prompt">
+            <div class="risk-prompt-label">PROMPT ADDITION</div>
+            "Insert defect that mishandles timeout or error codes from an external integration."
+          </div>
+        </div>
+      </div>
+
+      <div class="risk-card reveal reveal-delay-3" onclick="toggleRisk(this)" style="border-top: 2px solid var(--blue)">
+        <div class="risk-card-top">
+          <div>
+            <div class="risk-num" style="color:var(--blue)">03</div>
+            <div class="risk-title">Code vs Data Model</div>
+            <div class="risk-sub">Schema mismatches, type errors</div>
+          </div>
+          <div class="risk-expand-icon">+</div>
+        </div>
+        <div class="risk-detail">
+          <div style="font-size:14px; color:var(--white-dim); margin-bottom:16px; line-height:1.6;">Risks from mismatches between application code and database schema — type conversions, missing fields, wrong column names.</div>
+          <div class="code-block" style="font-size:12px;">
+            <div class="code-header"><div class="code-dots"><span></span><span></span><span></span></div><span class="code-filename">pages/api/profile/update.js</span></div>
+            <div class="code-body"><span class="kw">await</span> db.users.<span class="fn">update</span>({
+  <span class="key">where</span>: { id: userId },
+  <span class="key">data</span>: {
+    <span class="key">age</span>: <span class="fn">parseInt</span>(age), <span class="cmt">// DB expects int</span>
+    <span class="key">updatedAt</span>: <span class="kw">new</span> <span class="fn">Date</span>()
+  }
+});
+<span class="cmt">// 🧬 Mutant: age: age (string not int)</span>
+<span class="cmt">// 🧬 Mutant: removes updatedAt field</span></div>
+          </div>
+          <div class="risk-prompt">
+            <div class="risk-prompt-label">PROMPT ADDITION</div>
+            "Insert defect that creates a mismatch between the code's data model and the database schema."
+          </div>
+        </div>
+      </div>
+
+      <div class="risk-card reveal reveal-delay-1" onclick="toggleRisk(this)" style="border-top: 2px solid var(--green)">
+        <div class="risk-card-top">
+          <div>
+            <div class="risk-num" style="color:var(--green)">04</div>
+            <div class="risk-title">Historic Defects</div>
+            <div class="risk-sub">Off-by-one, race conditions</div>
+          </div>
+          <div class="risk-expand-icon">+</div>
+        </div>
+        <div class="risk-detail">
+          <div style="font-size:14px; color:var(--white-dim); margin-bottom:16px; line-height:1.6;">Recurring bugs specific to your codebase. Feed past issues into the prompt so AI simulates the exact patterns that have burned you before.</div>
+          <div class="code-block" style="font-size:12px;">
+            <div class="code-header"><div class="code-dots"><span></span><span></span><span></span></div><span class="code-filename">pages/api/products.js</span></div>
+            <div class="code-body"><span class="cmt">// Classic pagination off-by-one:</span>
+<span class="kw">const</span> offset = (page - <span class="num">1</span>) * limit; <span class="val">✓</span>
+
+<span class="cmt">// 🧬 Mutant: page * limit (removes -1)</span>
+<span class="cmt">// 🧬 Mutant: Math.floor vs Math.ceil</span>
+
+<span class="cmt">// Feed into prompt:</span>
+<span class="cmt">// recent_issues: ["BUG-456: off-by-one</span>
+<span class="cmt">//  in pagination", "BUG-457: ..."]</span></div>
+          </div>
+          <div class="risk-prompt">
+            <div class="risk-prompt-label">PROMPT ADDITION</div>
+            "Insert defect similar to a past defect, such as a race condition or off-by-one error."
+          </div>
+        </div>
+      </div>
+
+      <div class="risk-card reveal reveal-delay-2" onclick="toggleRisk(this)" style="border-top: 2px solid var(--orange)">
+        <div class="risk-card-top">
+          <div>
+            <div class="risk-num" style="color:var(--orange)">05</div>
+            <div class="risk-title">Change Impact</div>
+            <div class="risk-sub">Shared utilities, dependent modules</div>
+          </div>
+          <div class="risk-expand-icon">+</div>
+        </div>
+        <div class="risk-detail">
+          <div style="font-size:14px; color:var(--white-dim); margin-bottom:16px; line-height:1.6;">When you change a shared utility, the ripple effects through dependent code are often untested. AI targets the consumers of changed code, not just the changed lines themselves.</div>
+          <div class="code-block" style="font-size:12px;">
+            <div class="code-header"><div class="code-dots"><span></span><span></span><span></span></div><span class="code-filename">utils/formatPrice.js (changed)</span></div>
+            <div class="code-body"><span class="cmt">// Was: returned string "$10.00"</span>
+<span class="cmt">// Now: returns object</span>
+<span class="kw">return</span> { value: amount, display: <span class="str">`$${amount}`</span> };
+
+<span class="cmt">// Dependent components still expect string:</span>
+<span class="cmt">// ProductCard.jsx → renders [object Object]</span>
+<span class="cmt">// CartTotal.jsx → NaN on addition</span>
+<span class="cmt">// 🧬 AI mutates the consumers too</span></div>
+          </div>
+          <div class="risk-prompt">
+            <div class="risk-prompt-label">PROMPT ADDITION</div>
+            "Insert defect in code affected by recent changes, not just in changed lines."
+          </div>
+        </div>
+      </div>
+
+      <div class="risk-card reveal reveal-delay-3" onclick="toggleRisk(this)" style="border-top: 2px solid var(--blue)">
+        <div class="risk-card-top">
+          <div>
+            <div class="risk-num" style="color:var(--blue)">06</div>
+            <div class="risk-title">API Contracts</div>
+            <div class="risk-sub">External consumers, required fields</div>
+          </div>
+          <div class="risk-expand-icon">+</div>
+        </div>
+        <div class="risk-detail">
+          <div style="font-size:14px; color:var(--white-dim); margin-bottom:16px; line-height:1.6;">When external partners, mobile apps, or third-party consumers depend on your API contract, omitting a field or renaming a key silently breaks them downstream.</div>
+          <div class="code-block" style="font-size:12px;">
+            <div class="code-header"><div class="code-dots"><span></span><span></span><span></span></div><span class="code-filename">pages/api/v1/orders.js</span></div>
+            <div class="code-body"><span class="cmt">// External clients expect ALL of these:</span>
+<span class="kw">return</span> res.<span class="fn">json</span>({
+  <span class="key">orderId</span>: order.id,   <span class="cmt">// not 'id'!</span>
+  <span class="key">status</span>:  order.status,
+  <span class="key">total</span>:   order.total,
+  <span class="key">items</span>:   order.lineItems
+});
+
+<span class="cmt">// 🧬 Mutant: 'id' instead of 'orderId'</span>
+<span class="cmt">// 🧬 Mutant: total field removed</span></div>
+          </div>
+          <div class="risk-prompt">
+            <div class="risk-prompt-label">PROMPT ADDITION</div>
+            "Insert defect that violates an interface contract, such as omitting a required field."
+          </div>
+        </div>
+      </div>
+
+      <div class="risk-card reveal reveal-delay-4" onclick="toggleRisk(this)" style="border-top: 2px solid var(--green)">
+        <div class="risk-card-top">
+          <div>
+            <div class="risk-num" style="color:var(--green)">07</div>
+            <div class="risk-title">Performance / UX</div>
+            <div class="risk-sub">Loops, delays, payload size</div>
+          </div>
+          <div class="risk-expand-icon">+</div>
+        </div>
+        <div class="risk-detail">
+          <div style="font-size:14px; color:var(--white-dim); margin-bottom:16px; line-height:1.6;">Performance regressions in public-facing endpoints — removing pagination limits, adding unnecessary loops, or introducing artificial delays that degrade user experience.</div>
+          <div class="code-block" style="font-size:12px;">
+            <div class="code-header"><div class="code-dots"><span></span><span></span><span></span></div><span class="code-filename">pages/api/search.js</span></div>
+            <div class="code-body"><span class="kw">const</span> results = <span class="kw">await</span> db.products.<span class="fn">findMany</span>({
+  <span class="key">where</span>: { name: { <span class="key">contains</span>: query } },
+  <span class="key">take</span>: <span class="num">20</span>,  <span class="cmt">// limits results</span>
+  <span class="key">select</span>: { id: <span class="val">true</span>, name: <span class="val">true</span> }
+});
+
+<span class="cmt">// 🧬 Mutant: removes take: 20 (returns ALL)</span>
+<span class="cmt">// 🧬 Mutant: adds large fields to select</span>
+<span class="cmt">// 🧬 Mutant: adds setTimeout(1000) delay</span></div>
+          </div>
+          <div class="risk-prompt">
+            <div class="risk-prompt-label">PROMPT ADDITION</div>
+            "Insert performance regression, such as an inefficient loop or unnecessary delay."
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════
+     SECTION 9 — FULL PIPELINE
+═══════════════════════════════════════════ -->
+<section id="pipeline">
+  <div class="section-inner">
+    <div class="eyebrow reveal" style="color: var(--green)">THE FULL WORKFLOW</div>
+    <h2 class="section-title reveal reveal-delay-1">Finding Unique<br>Actionable Mutants</h2>
+    <p class="section-subtitle reveal reveal-delay-2">
+      Every mutant passes through 5 quality gates before it's considered actionable. Click each phase to see the details and the code behind the decision.
+    </p>
+    <div class="pipeline-container">
+
+      <div class="pipeline-phase open reveal reveal-delay-1">
+        <div class="phase-header" onclick="togglePhase(this)">
+          <span class="phase-badge" style="background:rgba(77,159,255,0.12); color:var(--blue)">PHASE 1</span>
+          <div class="phase-title">Generation</div>
+          <span class="phase-toggle">▼</span>
+        </div>
+        <div class="phase-content">
+          <div style="font-size:14px; color:var(--white-dim); margin-bottom:16px; line-height:1.6;">Create an isolated mutation branch. Prompt the LLM with code + risk factor + issue summary. Generate the mutant and commit it.</div>
+          <div class="code-block" style="font-size:12px;">
+            <div class="code-header"><div class="code-dots"><span></span><span></span><span></span></div><span class="code-filename">git workflow</span><button class="code-copy" onclick="copyCode(this)">COPY</button></div>
+            <div class="code-body"><span class="cmt"># Create isolated mutation branch</span>
+git checkout -b mutation/MUT-20260601-001
+
+<span class="cmt"># Context gathered automatically from PR:</span>
+<span class="cmt"># - changed files & functions</span>
+<span class="cmt"># - impacted tests</span>
+<span class="cmt"># - recent bug history</span>
+<span class="cmt"># - risk factors</span>
+
+<span class="cmt"># LLM generates mutant → commit it</span>
+git commit -m <span class="str">"🧬 MUTANT MUT-001: removed timeout check"</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="pipeline-phase reveal reveal-delay-2">
+        <div class="phase-header" onclick="togglePhase(this)">
+          <span class="phase-badge" style="background:rgba(255,140,66,0.12); color:var(--orange)">PHASE 2</span>
+          <div class="phase-title">5-Gate Filtering</div>
+          <span class="phase-toggle">▼</span>
+        </div>
+        <div class="phase-content">
+          <div style="font-size:14px; color:var(--white-dim); margin-bottom:16px; line-height:1.6;">Every generated mutant must pass all 5 gates. Fail any one → immediately discarded. Only mutants that survive all 5 proceed.</div>
+          <div class="gate-list">
+            <div class="gate-item">
+              <div class="gate-num discard">GATE 1</div>
+              <div>
+                <div class="gate-desc">Mutant must <strong>build successfully</strong></div>
+                <div class="gate-rule">Syntax errors = discard immediately. Bugs can't hide if the code doesn't compile.</div>
+              </div>
+            </div>
+            <div class="gate-item">
+              <div class="gate-num discard">GATE 2</div>
+              <div>
+                <div class="gate-desc">Mutant must be <strong>non-trivial and not in arid regions</strong></div>
+                <div class="gate-rule">No whitespace changes, comment edits, console.log tweaks, or boilerplate mutations.</div>
+              </div>
+            </div>
+            <div class="gate-item">
+              <div class="gate-num discard">GATE 3</div>
+              <div>
+                <div class="gate-desc">Mutant must <strong>not be a duplicate</strong></div>
+                <div class="gate-rule">Same logical change in same location = duplicate. Hash-based deduplication.</div>
+              </div>
+            </div>
+            <div class="gate-item">
+              <div class="gate-num discard">GATE 4</div>
+              <div>
+                <div class="gate-desc">Mutant must <strong>survive relevant tests</strong></div>
+                <div class="gate-rule">Run tests selected by coverage and impact. If tests already catch it → discard (not actionable).</div>
+              </div>
+            </div>
+            <div class="gate-item">
+              <div class="gate-num keep">GATE 5</div>
+              <div>
+                <div class="gate-desc">Mutant must <strong>not be semantically equivalent</strong></div>
+                <div class="gate-rule">AST comparison + static analysis + AI semantic check. 3-way verdict: Equivalent/Not Equivalent/Uncertain.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="pipeline-phase reveal reveal-delay-3">
+        <div class="phase-header" onclick="togglePhase(this)">
+          <span class="phase-badge" style="background:rgba(0,232,122,0.12); color:var(--green)">PHASE 3</span>
+          <div class="phase-title">Test Improvement Loop</div>
+          <span class="phase-toggle">▼</span>
+        </div>
+        <div class="phase-content">
+          <div style="font-size:14px; color:var(--white-dim); margin-bottom:16px; line-height:1.6;">For each unique actionable mutant — AI either strengthens an existing test or generates a new one. Up to 3 automated refinement attempts before flagging for manual review.</div>
+          <div class="code-block" style="font-size:12px;">
+            <div class="code-header"><div class="code-dots"><span></span><span></span><span></span></div><span class="code-filename">improvement loop</span><button class="code-copy" onclick="copyCode(this)">COPY</button></div>
+            <div class="code-body"><span class="kw">for</span> mutant <span class="kw">in</span> unique_actionable_mutants:
+
+  existing_test = <span class="fn">find_covering_test</span>(mutant)
+
+  <span class="kw">if</span> existing_test:
+    test = <span class="fn">ai_strengthen</span>(existing_test, mutant)
+  <span class="kw">else</span>:
+    test = <span class="fn">ai_generate_new</span>(mutant)
+
+  attempts = <span class="num">0</span>
+  <span class="kw">while</span> attempts < <span class="num">3</span>:
+    <span class="kw">if</span> <span class="fn">builds</span>() <span class="kw">and</span> <span class="fn">fails_on_mutant</span>() <span class="kw">and</span>
+       <span class="fn">passes_on_original</span>() <span class="kw">and</span> <span class="fn">logically_valid</span>():
+      <span class="fn">commit_and_cherrypick</span>(test)
+      <span class="kw">break</span>
+    test = <span class="fn">ai_refine</span>(test, observed_error)
+    attempts += <span class="num">1</span>
+  <span class="kw">else</span>:
+    <span class="fn">flag_for_manual_review</span>(mutant)</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="pipeline-phase reveal reveal-delay-4">
+        <div class="phase-header" onclick="togglePhase(this)">
+          <span class="phase-badge" style="background:rgba(240,244,255,0.08); color:var(--white-dim)">PHASE 4</span>
+          <div class="phase-title">Metadata Recording</div>
+          <span class="phase-toggle">▼</span>
+        </div>
+        <div class="phase-content">
+          <div style="font-size:14px; color:var(--white-dim); margin-bottom:16px; line-height:1.6;">Every mutant is recorded with full metadata for traceability, metrics calculation, and continuous improvement of the pipeline.</div>
+          <div class="code-block" style="font-size:12px;">
+            <div class="code-header"><div class="code-dots"><span></span><span></span><span></span></div><span class="code-filename">mutant-record.json</span><button class="code-copy" onclick="copyCode(this)">COPY</button></div>
+            <div class="code-body">{
+  <span class="key">"mutant_id"</span>:            <span class="str">"MUT-20260601-001"</span>,
+  <span class="key">"file"</span>:                 <span class="str">"src/payment/PaymentService.js"</span>,
+  <span class="key">"function"</span>:             <span class="str">"processPayment"</span>,
+  <span class="key">"line_number"</span>:          <span class="num">87</span>,
+  <span class="key">"risk_factor"</span>:          <span class="str">"Integrations"</span>,
+  <span class="key">"mutation_description"</span>: <span class="str">"Removed timeout check"</span>,
+  <span class="key">"status"</span>:               <span class="str">"unique_actionable"</span>,
+  <span class="key">"build_status"</span>:         <span class="str">"Success"</span>,
+  <span class="key">"mutant_status"</span>:        <span class="str">"Killed"</span>,
+  <span class="key">"equivalence_result"</span>:   <span class="str">"Not Equivalent"</span>,
+  <span class="key">"developer_feedback"</span>:   <span class="str">"realistic"</span>,
+  <span class="key">"manual_review_needed"</span>: <span class="val">false</span>,
+  <span class="key">"created_timestamp"</span>:    <span class="str">"2026-06-01T13:45:12Z"</span>
+}</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════
+     SECTION 10 — DECISION MATRIX
+═══════════════════════════════════════════ -->
+<section id="matrix">
+  <div class="section-inner">
+    <div class="eyebrow reveal" style="color: var(--orange)">THE DECISION MATRIX</div>
+    <h2 class="section-title reveal reveal-delay-1">Only 1 outcome wins</h2>
+    <p class="section-subtitle reveal reveal-delay-2">
+      When a generated test is evaluated, it falls into one of 6 scenarios. The automated pipeline handles all of them — only the winning scenario requires developer attention.
+    </p>
+    <div class="reveal reveal-delay-3" style="overflow-x: auto;">
+      <table class="matrix-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>ORIGINAL CODE</th>
+            <th>MUTANT CODE</th>
+            <th>SIGNAL</th>
+            <th>ACTION</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="winner">
+            <td><span class="mono-val" style="color:var(--green)">1 ★</span></td>
+            <td><span class="mono-val" style="color:var(--green)">✓ Pass</span></td>
+            <td><span class="mono-val" style="color:var(--red)">✗ Fail</span></td>
+            <td style="color:var(--green); font-size:13px;">Mutant killed — test detects the regression</td>
+            <td><span class="badge-keep">KEEP → Alert dev</span></td>
+          </tr>
+          <tr>
+            <td><span class="mono-val" style="color:var(--gray)">2</span></td>
+            <td><span class="mono-val" style="color:var(--green)">✓ Pass</span></td>
+            <td><span class="mono-val" style="color:var(--green)">✓ Pass</span></td>
+            <td style="color:var(--orange); font-size:13px;">Weak assertion — doesn't detect the change</td>
+            <td><span class="badge-fix">STRENGTHEN</span></td>
+          </tr>
+          <tr>
+            <td><span class="mono-val" style="color:var(--gray)">3</span></td>
+            <td><span class="mono-val" style="color:var(--red)">✗ Fail</span></td>
+            <td><span class="mono-val" style="color:var(--green)">✓ Pass</span></td>
+            <td style="color:var(--red); font-size:13px;">Test is broken — invalid on original code</td>
+            <td><span class="badge-discard">DISCARD + REDO</span></td>
+          </tr>
+          <tr>
+            <td><span class="mono-val" style="color:var(--gray)">4</span></td>
+            <td><span class="mono-val" style="color:var(--red)">✗ Build</span></td>
+            <td><span class="mono-val" style="color:var(--green)">✓ Pass</span></td>
+            <td style="color:var(--red); font-size:13px;">Targets nonexistent code — doesn't compile</td>
+            <td><span class="badge-discard">DISCARD + REDO</span></td>
+          </tr>
+          <tr>
+            <td><span class="mono-val" style="color:var(--gray)">5</span></td>
+            <td><span class="mono-val" style="color:var(--red)">✗ Build</span></td>
+            <td><span class="mono-val" style="color:var(--red)">✗ Fail</span></td>
+            <td style="color:var(--red); font-size:13px;">New functionality targeted — incompatible</td>
+            <td><span class="badge-discard">DISCARD + REDO</span></td>
+          </tr>
+          <tr>
+            <td><span class="mono-val" style="color:var(--gray)">6</span></td>
+            <td><span class="mono-val" style="color:var(--red)">✗ Fail</span></td>
+            <td><span class="mono-val" style="color:var(--red)">✗ Fail</span></td>
+            <td style="color:var(--red); font-size:13px;">Fails on both — ambiguous, no signal value</td>
+            <td><span class="badge-discard">DISCARD + REDO</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="condition-box reveal reveal-delay-4">
+      <div class="label">CONDITION 1 — THE ONLY WINNING FORMULA</div>
+      <div class="rule">
+        <span class="pass-code">PASS</span> on original &nbsp;·&nbsp;
+        <span class="fail-code">FAIL</span> on mutant
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════
+     SECTION 11 — CTA
+═══════════════════════════════════════════ -->
+<section id="cta">
+  <div class="cta-inner">
+    <div class="cta-divider reveal"></div>
+    <h2 class="cta-title reveal reveal-delay-1">
+      Stop measuring<br>
+      <span class="red">coverage.</span><br>
+      Start measuring<br>
+      <span class="green">protection.</span>
+    </h2>
+    <div class="cta-question reveal reveal-delay-2">
+      What's your current mutation score?
+    </div>
+    <div class="metrics-strip reveal reveal-delay-3">
+      <div class="metric-item">
+        <div class="metric-val" style="color:var(--green)">95%</div>
+        <div class="metric-key">COVERAGE</div>
+      </div>
+      <div style="display:flex;align-items:center;color:var(--gray);font-size:24px;">−</div>
+      <div class="metric-item">
+        <div class="metric-val" style="color:var(--red)">40%</div>
+        <div class="metric-key">MUTATION SCORE</div>
+      </div>
+      <div style="display:flex;align-items:center;color:var(--gray);font-size:24px;">=</div>
+      <div class="metric-item">
+        <div class="metric-val" style="color:var(--orange)">55pt</div>
+        <div class="metric-key">ORACLE GAP</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+// ═══════════════════════════════════════════
+// SCROLL PROGRESS
+// ═══════════════════════════════════════════
+const progressBar = document.getElementById('progressBar');
+window.addEventListener('scroll', () => {
+  const pct = (window.scrollY / (document.documentElement.scrollHeight - window.innerHeight)) * 100;
+  progressBar.style.width = pct + '%';
+});
+
+// ═══════════════════════════════════════════
+// INTERSECTION OBSERVER — REVEAL + NAV
+// ═══════════════════════════════════════════
+const revealEls = document.querySelectorAll('.reveal');
+const sections  = document.querySelectorAll('section[id]');
+const navItems  = document.querySelectorAll('.nav-item');
+
+const revealObserver = new IntersectionObserver((entries) => {
+  entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); } });
+}, { threshold: 0.1 });
+
+revealEls.forEach(el => revealObserver.observe(el));
+
+const sectionObserver = new IntersectionObserver((entries) => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      const id = e.target.id;
+      navItems.forEach(n => {
+        n.classList.toggle('active', n.dataset.section === id);
+      });
+      // Trigger bar animations when gap section visible
+      if (id === 'gap') animateBars();
+      // Trigger counters when hero visible
+      if (id === 'hero') animateCounters();
+    }
+  });
+}, { threshold: 0.4 });
+
+sections.forEach(s => sectionObserver.observe(s));
+
+// ═══════════════════════════════════════════
+// COUNTER ANIMATION
+// ═══════════════════════════════════════════
+function animateCounters() {
+  document.querySelectorAll('[data-count]').forEach(el => {
+    const target = parseInt(el.dataset.count);
+    const suffix = el.dataset.suffix || '';
+    let current = 0;
+    const step = target / 40;
+    const timer = setInterval(() => {
+      current = Math.min(current + step, target);
+      el.textContent = Math.round(current) + suffix;
+      if (current >= target) clearInterval(timer);
+    }, 30);
+  });
+}
+
+// Trigger on load
+setTimeout(animateCounters, 800);
+
+// ═══════════════════════════════════════════
+// BAR ANIMATIONS
+// ═══════════════════════════════════════════
+let barsAnimated = false;
+function animateBars() {
+  if (barsAnimated) return;
+  barsAnimated = true;
+  document.querySelectorAll('.bar-fill').forEach(bar => {
+    const w = bar.dataset.width;
+    setTimeout(() => { bar.style.width = w + '%'; }, 200);
+  });
+}
+
+// ═══════════════════════════════════════════
+// INTERACTIVE MUTANT DEMO
+// ═══════════════════════════════════════════
+const mutants = [
+  {
+    file: 'checkout.js',
+    killed: false,
+    body: `<span class="cmt">// Mutant 1: Wrong operator</span>
+<span class="kw">export default function</span> <span class="fn">handler</span>(req, res) {
+  <span class="kw">const</span> { price, userType } = req.body;
+  <span class="kw">if</span> (userType === <span class="str">'premium'</span>) {
+    <span class="kw">const</span> discountedPrice = price <span class="mut">+ 0.8</span>; <span class="err">← was * 0.8</span>
+    <span class="kw">return</span> res.<span class="fn">json</span>({ total: discountedPrice });
+  }
+  <span class="kw">return</span> res.<span class="fn">json</span>({ total: price });
+}`,
+    killedDesc: '✓ Your test catches it: <code>expect(data.total).toBe(80)</code> fails because the mutant returns 100.8. Mutant killed.',
+    survivedDesc: '⚠ Your test only checks <code>expect(res.status).toBe(200)</code> — the status is still 200 even with the wrong total. Mutant survives.'
+  },
+  {
+    file: 'pages/api/admin.js',
+    killed: true,
+    body: `<span class="cmt">// Mutant 2: Removed role check</span>
+<span class="kw">export default function</span> <span class="fn">handler</span>(req, res) {
+  <span class="kw">const</span> { user } = req.session;
+
+  <span class="kw">if</span> (!user) { <span class="cmt">// role check REMOVED</span>
+    <span class="kw">return</span> res.<span class="num">403</span>.<span class="fn">json</span>({ <span class="key">error</span>: <span class="str">'Forbidden'</span> });
+  }
+  <span class="err">// user.role !== 'admin' check gone!</span>
+  <span class="cmt">// Any logged-in user now has admin access</span>
+
+  <span class="kw">return</span> res.<span class="fn">json</span>({ <span class="key">data</span>: <span class="str">'secret admin data'</span> });
+}`,
+    killedDesc: '✓ Your test catches it: <code>expect(res.status).toBe(403)</code> for a non-admin user fails because the mutant now returns 200. Mutant killed.',
+    survivedDesc: '⚠ Your test only covers the "no user" case, never the "wrong role" case. The mutant lets any logged-in user through. Mutant survives.'
+  },
+  {
+    file: 'services/payment.js',
+    killed: false,
+    body: `<span class="cmt">// Mutant 3: Silent timeout failure</span>
+<span class="kw">try</span> {
+  <span class="kw">const</span> charge = <span class="kw">await</span> stripe.charges.<span class="fn">create</span>({...});
+
+  <span class="cmt">// Status check REMOVED:</span>
+  <span class="err">// if (charge.status !== 'succeeded') throw...</span>
+
+  <span class="kw">await</span> db.orders.<span class="fn">update</span>({
+    <span class="key">status</span>: <span class="str">'paid'</span> <span class="err">← even if payment failed!</span>
+  });
+} <span class="kw">catch</span> (e) {
+  <span class="cmt">// Error swallowed silently</span>
+}`,
+    killedDesc: '✓ Your test catches it: mocked Stripe returning non-success status still results in order being marked paid. Assertion fails. Mutant killed.',
+    survivedDesc: '⚠ Your tests only mock successful charges. They never test the failure path. The silent failure goes undetected. Mutant survives.'
+  }
+];
+
+let currentMutant = 0;
+
+function renderMutant() {
+  const m = mutants[currentMutant];
+  document.getElementById('mutantFile').textContent = m.file;
+  document.getElementById('mutantBody').innerHTML = m.body;
+  document.getElementById('outcomeResult').className = 'outcome-result';
+}
+
+function selectMutant(idx, btn) {
+  currentMutant = idx;
+  document.querySelectorAll('.mutant-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderMutant();
+}
+
+function runTests() {
+  const m = mutants[currentMutant];
+  const result = document.getElementById('outcomeResult');
+  result.className = 'outcome-result show ' + (m.killed ? 'killed' : 'survived');
+  document.getElementById('outcomeIcon').textContent = m.killed ? '🟢' : '🔴';
+  document.getElementById('outcomeTitle').textContent = m.killed ? 'MUTANT KILLED' : 'MUTANT SURVIVED';
+  document.getElementById('outcomeDesc').innerHTML = m.killed ? m.killedDesc : m.survivedDesc;
+}
+
+renderMutant();
+
+// ═══════════════════════════════════════════
+// TABS
+// ═══════════════════════════════════════════
+function switchTab(idx, btn) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('tab-' + idx).classList.add('active');
+}
+
+// ═══════════════════════════════════════════
+// RISK CARD TOGGLE
+// ═══════════════════════════════════════════
+function toggleRisk(card) {
+  card.classList.toggle('expanded');
+}
+
+// ═══════════════════════════════════════════
+// PIPELINE PHASE TOGGLE
+// ═══════════════════════════════════════════
+function togglePhase(header) {
+  header.parentElement.classList.toggle('open');
+}
+
+// ═══════════════════════════════════════════
+// COPY CODE
+// ═══════════════════════════════════════════
+function copyCode(btn) {
+  const body = btn.closest('.code-block').querySelector('.code-body');
+  const text = body.innerText;
+  navigator.clipboard.writeText(text).then(() => {
+    btn.textContent = 'COPIED!';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = 'COPY'; btn.classList.remove('copied'); }, 2000);
+  });
+}
+
+// ═══════════════════════════════════════════
+// SMOOTH NAV CLICK
+// ═══════════════════════════════════════════
+document.querySelectorAll('.nav-item').forEach(item => {
+  item.addEventListener('click', e => {
+    e.preventDefault();
+    const target = document.querySelector(item.getAttribute('href'));
+    if (target) target.scrollIntoView({ behavior: 'smooth' });
+  });
+});
+</script>
+</body>
+</html>
