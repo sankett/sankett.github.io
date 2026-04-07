@@ -1,0 +1,1535 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Migration with Evals — Vertical Slice Approach</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@400;500&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0d14;
+    --surface: #111520;
+    --surface2: #161b2e;
+    --border: #1e2640;
+    --accent: #3d7fff;
+    --accent2: #00d4aa;
+    --accent3: #ff6b35;
+    --danger: #ff3d5a;
+    --warn: #ffb020;
+    --text: #e8ecf4;
+    --text-muted: #6b7899;
+    --text-dim: #3a4460;
+    --green: #00d4aa;
+    --red: #ff3d5a;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    line-height: 1.7;
+    overflow-x: hidden;
+  }
+
+  /* NOISE TEXTURE */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.4;
+  }
+
+  /* HERO */
+  .hero {
+    position: relative;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    padding: 80px 24px 60px;
+    overflow: hidden;
+  }
+
+  .hero-glow {
+    position: absolute;
+    width: 600px;
+    height: 600px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(61,127,255,0.12) 0%, transparent 70%);
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+  }
+
+  .hero-glow2 {
+    position: absolute;
+    width: 400px;
+    height: 400px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(0,212,170,0.08) 0%, transparent 70%);
+    top: 30%;
+    right: 10%;
+    pointer-events: none;
+  }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(61,127,255,0.1);
+    border: 1px solid rgba(61,127,255,0.25);
+    color: var(--accent);
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding: 6px 14px;
+    border-radius: 100px;
+    margin-bottom: 32px;
+    animation: fadeUp 0.6s ease both;
+  }
+
+  .badge .dot {
+    width: 6px;
+    height: 6px;
+    background: var(--accent);
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(0.8); }
+  }
+
+  .hero h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(36px, 7vw, 80px);
+    font-weight: 800;
+    line-height: 1.05;
+    letter-spacing: -0.03em;
+    animation: fadeUp 0.7s 0.1s ease both;
+    position: relative;
+    z-index: 1;
+  }
+
+  .hero h1 .line1 { display: block; color: var(--text); }
+  .hero h1 .line2 {
+    display: block;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .hero-sub {
+    max-width: 580px;
+    color: var(--text-muted);
+    font-size: 17px;
+    font-weight: 300;
+    margin-top: 20px;
+    animation: fadeUp 0.7s 0.2s ease both;
+  }
+
+  .hero-stack {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 36px;
+    flex-wrap: wrap;
+    justify-content: center;
+    animation: fadeUp 0.7s 0.3s ease both;
+  }
+
+  .stack-tag {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    padding: 6px 12px;
+    border-radius: 6px;
+  }
+
+  .stack-arrow {
+    color: var(--text-dim);
+    font-size: 18px;
+  }
+
+  .scroll-hint {
+    position: absolute;
+    bottom: 32px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    color: var(--text-dim);
+    font-size: 11px;
+    font-family: 'DM Mono', monospace;
+    letter-spacing: 0.1em;
+    animation: fadeUp 1s 0.8s ease both;
+  }
+
+  .scroll-line {
+    width: 1px;
+    height: 40px;
+    background: linear-gradient(to bottom, var(--accent), transparent);
+    animation: scrollDrop 2s infinite;
+  }
+
+  @keyframes scrollDrop {
+    0% { transform: scaleY(0); transform-origin: top; }
+    50% { transform: scaleY(1); transform-origin: top; }
+    51% { transform: scaleY(1); transform-origin: bottom; }
+    100% { transform: scaleY(0); transform-origin: bottom; }
+  }
+
+  /* MAIN CONTENT */
+  .container {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 0 24px;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* SECTION HEADER */
+  .section-header {
+    text-align: center;
+    margin-bottom: 60px;
+  }
+
+  .section-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--accent2);
+    margin-bottom: 12px;
+  }
+
+  .section-title {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(28px, 4vw, 44px);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--text);
+  }
+
+  .section-desc {
+    color: var(--text-muted);
+    max-width: 560px;
+    margin: 12px auto 0;
+    font-weight: 300;
+  }
+
+  /* WHAT IS A SLICE */
+  .slice-explainer {
+    padding: 80px 0;
+    border-top: 1px solid var(--border);
+  }
+
+  .slice-visual {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 32px;
+    margin-top: 40px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .slice-visual::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+  }
+
+  .slice-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--accent2);
+    letter-spacing: 0.1em;
+    margin-bottom: 16px;
+    text-transform: uppercase;
+  }
+
+  .slice-example {
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    color: var(--text-muted);
+    line-height: 2;
+  }
+
+  .slice-example .feature {
+    color: var(--accent);
+    font-size: 15px;
+    font-weight: 500;
+  }
+
+  .slice-layers {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 12px;
+    margin-top: 24px;
+  }
+
+  .slice-layer {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .layer-icon {
+    font-size: 20px;
+    flex-shrink: 0;
+  }
+
+  .layer-text {
+    font-size: 13px;
+  }
+
+  .layer-old {
+    color: var(--text-muted);
+    font-size: 11px;
+    font-family: 'DM Mono', monospace;
+  }
+
+  .layer-new {
+    color: var(--accent2);
+    font-size: 12px;
+    font-weight: 500;
+    margin-top: 2px;
+  }
+
+  /* PHASES */
+  .phases-section {
+    padding: 80px 0;
+    border-top: 1px solid var(--border);
+  }
+
+  .phase-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    margin-bottom: 20px;
+    overflow: hidden;
+    transition: border-color 0.3s ease;
+    cursor: pointer;
+  }
+
+  .phase-card:hover {
+    border-color: var(--accent);
+  }
+
+  .phase-card.active {
+    border-color: var(--accent);
+  }
+
+  .phase-header {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding: 24px 28px;
+    user-select: none;
+  }
+
+  .phase-number {
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 16px;
+    flex-shrink: 0;
+  }
+
+  .phase-0 .phase-number { background: rgba(255,176,32,0.15); color: var(--warn); }
+  .phase-1 .phase-number { background: rgba(61,127,255,0.15); color: var(--accent); }
+  .phase-2 .phase-number { background: rgba(0,212,170,0.15); color: var(--accent2); }
+  .phase-3 .phase-number { background: rgba(255,107,53,0.15); color: var(--accent3); }
+  .phase-4 .phase-number { background: rgba(61,127,255,0.15); color: var(--accent); }
+  .phase-5 .phase-number { background: rgba(0,212,170,0.15); color: var(--accent2); }
+
+  .phase-meta { flex: 1; }
+
+  .phase-name {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 17px;
+    color: var(--text);
+  }
+
+  .phase-timing {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 2px;
+    letter-spacing: 0.05em;
+  }
+
+  .phase-chevron {
+    color: var(--text-dim);
+    font-size: 18px;
+    transition: transform 0.3s ease;
+    flex-shrink: 0;
+  }
+
+  .phase-card.active .phase-chevron {
+    transform: rotate(180deg);
+    color: var(--accent);
+  }
+
+  .phase-body {
+    display: none;
+    padding: 0 28px 28px;
+    border-top: 1px solid var(--border);
+    animation: fadeIn 0.3s ease;
+  }
+
+  .phase-card.active .phase-body {
+    display: block;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .phase-body-inner {
+    padding-top: 24px;
+  }
+
+  .phase-desc {
+    color: var(--text-muted);
+    font-weight: 300;
+    margin-bottom: 20px;
+    font-size: 14px;
+  }
+
+  /* CHECKLIST */
+  .checklist {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .checklist li {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    font-size: 14px;
+    color: var(--text-muted);
+  }
+
+  .check-icon {
+    width: 20px;
+    height: 20px;
+    border-radius: 6px;
+    background: rgba(0,212,170,0.12);
+    border: 1px solid rgba(0,212,170,0.25);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-top: 2px;
+    font-size: 10px;
+    color: var(--accent2);
+  }
+
+  /* CODE BLOCK */
+  .code-block {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px;
+    margin: 16px 0;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    line-height: 2;
+    color: var(--text-muted);
+    overflow-x: auto;
+  }
+
+  .code-block .hl { color: var(--accent2); }
+  .code-block .warn { color: var(--warn); }
+  .code-block .err { color: var(--red); }
+  .code-block .ok { color: var(--green); }
+  .code-block .comment { color: var(--text-dim); }
+
+  /* TABLE */
+  .eval-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 16px 0;
+    font-size: 13px;
+  }
+
+  .eval-table th {
+    background: var(--surface2);
+    color: var(--text-muted);
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 10px 14px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .eval-table td {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    color: var(--text-muted);
+    vertical-align: top;
+  }
+
+  .eval-table tr:last-child td { border-bottom: none; }
+
+  .eval-table .pass { color: var(--green); font-weight: 500; }
+  .eval-table .fail { color: var(--red); font-weight: 500; }
+
+  /* PIPELINE VISUAL */
+  .pipeline {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    margin: 20px 0;
+  }
+
+  .pipeline-step {
+    display: flex;
+    align-items: stretch;
+    gap: 16px;
+  }
+
+  .pipeline-left {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 36px;
+    flex-shrink: 0;
+  }
+
+  .pipeline-dot {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    flex-shrink: 0;
+    z-index: 1;
+  }
+
+  .pipeline-line {
+    width: 2px;
+    flex: 1;
+    background: var(--border);
+    margin: 4px 0;
+  }
+
+  .pipeline-step:last-child .pipeline-line { display: none; }
+
+  .pipeline-content {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 18px;
+    flex: 1;
+    margin-bottom: 12px;
+  }
+
+  .pipeline-content-title {
+    font-weight: 500;
+    font-size: 14px;
+    color: var(--text);
+    margin-bottom: 4px;
+  }
+
+  .pipeline-content-desc {
+    font-size: 12px;
+    color: var(--text-muted);
+    font-family: 'DM Mono', monospace;
+  }
+
+  /* ORDER STEPS */
+  .order-steps {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin: 16px 0;
+  }
+
+  .order-step {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+    text-align: center;
+    position: relative;
+  }
+
+  .order-step-num {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 28px;
+    color: var(--text-dim);
+    line-height: 1;
+  }
+
+  .order-step-label {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 8px;
+    line-height: 1.4;
+  }
+
+  .order-step-tag {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--accent2);
+    margin-top: 6px;
+  }
+
+  /* SIGN OFF */
+  .signoff-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 12px;
+    margin: 16px 0;
+  }
+
+  .signoff-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px;
+    font-size: 13px;
+    color: var(--text-muted);
+  }
+
+  .signoff-check {
+    color: var(--green);
+    font-size: 16px;
+    flex-shrink: 0;
+  }
+
+  /* FLOW DIAGRAM */
+  .flow-section {
+    padding: 80px 0;
+    border-top: 1px solid var(--border);
+  }
+
+  .flow-diagram {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 40px 32px;
+    margin-top: 40px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .flow-row {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+  }
+
+  .flow-box {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 24px;
+    text-align: center;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text);
+    min-width: 240px;
+    max-width: 320px;
+    width: 100%;
+    transition: all 0.3s ease;
+  }
+
+  .flow-box.accent { border-color: var(--accent); color: var(--accent); }
+  .flow-box.green { border-color: var(--accent2); color: var(--accent2); }
+  .flow-box.orange { border-color: var(--accent3); color: var(--accent3); }
+
+  .flow-arrow {
+    color: var(--text-dim);
+    font-size: 20px;
+    line-height: 1;
+    padding: 6px 0;
+  }
+
+  .flow-branch {
+    display: flex;
+    gap: 20px;
+    align-items: flex-start;
+    width: 100%;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .flow-branch-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+    flex: 1;
+    min-width: 160px;
+    max-width: 220px;
+  }
+
+  .flow-box.small {
+    font-size: 13px;
+    padding: 10px 16px;
+    min-width: unset;
+    width: 100%;
+  }
+
+  /* RISKS */
+  .risks-section {
+    padding: 80px 0;
+    border-top: 1px solid var(--border);
+  }
+
+  .risk-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 16px;
+    margin-top: 40px;
+  }
+
+  .risk-card {
+    background: var(--surface);
+    border: 1px solid rgba(255,61,90,0.2);
+    border-radius: 16px;
+    padding: 28px;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s ease;
+  }
+
+  .risk-card:hover {
+    border-color: var(--danger);
+    transform: translateY(-2px);
+  }
+
+  .risk-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--danger), transparent);
+  }
+
+  .risk-number {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 48px;
+    color: rgba(255,61,90,0.1);
+    line-height: 1;
+    position: absolute;
+    top: 16px;
+    right: 20px;
+  }
+
+  .risk-icon {
+    font-size: 28px;
+    margin-bottom: 14px;
+    display: block;
+  }
+
+  .risk-title {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 16px;
+    color: var(--danger);
+    margin-bottom: 10px;
+  }
+
+  .risk-desc {
+    color: var(--text-muted);
+    font-size: 13px;
+    line-height: 1.7;
+    font-weight: 300;
+  }
+
+  .risk-impact {
+    margin-top: 14px;
+    background: rgba(255,61,90,0.07);
+    border: 1px solid rgba(255,61,90,0.15);
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 12px;
+    color: rgba(255,61,90,0.8);
+    font-style: italic;
+  }
+
+  /* FINAL BANNER */
+  .final-banner {
+    padding: 80px 0;
+    border-top: 1px solid var(--border);
+  }
+
+  .banner-card {
+    background: linear-gradient(135deg, rgba(61,127,255,0.08), rgba(0,212,170,0.05));
+    border: 1px solid rgba(61,127,255,0.2);
+    border-radius: 20px;
+    padding: 52px 48px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .banner-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+  }
+
+  .banner-quote {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(20px, 3vw, 30px);
+    font-weight: 700;
+    color: var(--text);
+    line-height: 1.4;
+    max-width: 640px;
+    margin: 0 auto;
+  }
+
+  .banner-quote .hl {
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .banner-sub {
+    color: var(--text-muted);
+    margin-top: 20px;
+    font-weight: 300;
+    font-size: 15px;
+  }
+
+  /* MANAGER SUMMARY */
+  .manager-table-section {
+    padding: 60px 0;
+    border-top: 1px solid var(--border);
+  }
+
+  .mgr-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 40px;
+    font-size: 14px;
+  }
+
+  .mgr-table th {
+    background: var(--surface2);
+    padding: 12px 20px;
+    text-align: left;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .mgr-table td {
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+
+  .mgr-table td:first-child {
+    color: var(--accent);
+    font-style: italic;
+    font-size: 13px;
+    width: 35%;
+  }
+
+  .mgr-table td:last-child {
+    color: var(--text-muted);
+    font-size: 13px;
+  }
+
+  .mgr-table tr:last-child td { border-bottom: none; }
+
+  /* FOOTER */
+  footer {
+    padding: 40px 24px;
+    text-align: center;
+    border-top: 1px solid var(--border);
+    color: var(--text-dim);
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+  }
+
+  /* ANIMATIONS */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .fade-in {
+    opacity: 0;
+    transform: translateY(24px);
+    transition: opacity 0.6s ease, transform 0.6s ease;
+  }
+
+  .fade-in.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  /* NAV DOTS */
+  .nav-dots {
+    position: fixed;
+    right: 24px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    z-index: 100;
+  }
+
+  .nav-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--text-dim);
+    cursor: pointer;
+    transition: all 0.3s ease;
+  }
+
+  .nav-dot.active, .nav-dot:hover {
+    background: var(--accent);
+    transform: scale(1.5);
+  }
+
+  /* RESPONSIVE */
+  @media (max-width: 768px) {
+    .order-steps { grid-template-columns: 1fr; }
+    .nav-dots { display: none; }
+    .banner-card { padding: 36px 24px; }
+    .phase-header { padding: 18px 20px; gap: 14px; }
+    .phase-body { padding: 0 20px 20px; }
+    .flow-branch { flex-direction: column; align-items: center; }
+    .risk-grid { grid-template-columns: 1fr; }
+    .mgr-table td:first-child { width: auto; }
+    .mgr-table { display: block; overflow-x: auto; }
+  }
+
+  @media (max-width: 480px) {
+    .slice-layers { grid-template-columns: 1fr; }
+    .signoff-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- NAV DOTS -->
+<nav class="nav-dots" id="navDots">
+  <div class="nav-dot active" data-section="0" title="Intro"></div>
+  <div class="nav-dot" data-section="1" title="What is a Slice"></div>
+  <div class="nav-dot" data-section="2" title="6 Phases"></div>
+  <div class="nav-dot" data-section="3" title="Full Flow"></div>
+  <div class="nav-dot" data-section="4" title="Risks"></div>
+  <div class="nav-dot" data-section="5" title="Manager Summary"></div>
+</nav>
+
+<!-- HERO -->
+<section class="hero" id="section0">
+  <div class="hero-glow"></div>
+  <div class="hero-glow2"></div>
+  <div class="badge">
+    <span class="dot"></span>
+    Migration Playbook — For Managers
+  </div>
+  <h1>
+    <span class="line1">Vertical Slice</span>
+    <span class="line2">Migration with Evals</span>
+  </h1>
+  <p class="hero-sub">A step-by-step guide to migrating legacy .NET MVC applications the right way — with AI assistance and built-in verification.</p>
+  <div class="hero-stack">
+    <span class="stack-tag">.NET MVC</span>
+    <span class="stack-arrow">→</span>
+    <span class="stack-tag">Angular Latest</span>
+    <span class="stack-tag">+</span>
+    <span class="stack-tag">.NET Core API</span>
+  </div>
+  <div class="scroll-hint">
+    <span>SCROLL</span>
+    <div class="scroll-line"></div>
+  </div>
+</section>
+
+<!-- WHAT IS A SLICE -->
+<section class="slice-explainer" id="section1">
+  <div class="container">
+    <div class="section-header fade-in">
+      <div class="section-label">Foundation</div>
+      <div class="section-title">What is a Vertical Slice?</div>
+      <p class="section-desc">Instead of migrating all controllers first, then all services — you pick one complete user-facing feature, end to end.</p>
+    </div>
+
+    <div class="slice-visual fade-in">
+      <div class="slice-label">Example Slice → "Invoice Generation"</div>
+      <div class="slice-example">
+        <span class="feature">One feature. Full stack. Fully verified. Then repeat.</span>
+      </div>
+      <div class="slice-layers">
+        <div class="slice-layer">
+          <div class="layer-icon">🖥️</div>
+          <div class="layer-text">
+            <div class="layer-old">Old: Razor View</div>
+            <div class="layer-new">New: Angular Component</div>
+          </div>
+        </div>
+        <div class="slice-layer">
+          <div class="layer-icon">⚙️</div>
+          <div class="layer-text">
+            <div class="layer-old">Old: MVC Controller</div>
+            <div class="layer-new">New: .NET Core API Endpoint</div>
+          </div>
+        </div>
+        <div class="slice-layer">
+          <div class="layer-icon">🔧</div>
+          <div class="layer-text">
+            <div class="layer-old">Old: Service Layer</div>
+            <div class="layer-new">New: Service Layer</div>
+          </div>
+        </div>
+        <div class="slice-layer">
+          <div class="layer-icon">🗄️</div>
+          <div class="layer-text">
+            <div class="layer-old">Old: DB Query</div>
+            <div class="layer-new">New: Same DB, new ORM</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 6 PHASES -->
+<section class="phases-section" id="section2">
+  <div class="container">
+    <div class="section-header fade-in">
+      <div class="section-label">The Approach</div>
+      <div class="section-title">6 Phases — Per Slice</div>
+      <p class="section-desc">Click each phase to expand. Follow this order, every time, for every slice.</p>
+    </div>
+
+    <!-- PHASE 0 -->
+    <div class="phase-card phase-0 fade-in active" onclick="togglePhase(this)">
+      <div class="phase-header">
+        <div class="phase-number">0</div>
+        <div class="phase-meta">
+          <div class="phase-name">Slice Selection & Baseline Capture</div>
+          <div class="phase-timing">⚠️ Most skipped. Most critical. Do before any code.</div>
+        </div>
+        <div class="phase-chevron">▾</div>
+      </div>
+      <div class="phase-body">
+        <div class="phase-body-inner">
+          <p class="phase-desc">You are building the <strong style="color:var(--warn)">answer key</strong> before the exam. Everything captured here becomes your Design Eval criteria in Phase 1.</p>
+          <ul class="checklist">
+            <li><span class="check-icon">✓</span> Document exactly what the old system does — behavior, not just code</li>
+            <li><span class="check-icon">✓</span> Record API request/response shapes via Postman / HAR files</li>
+            <li><span class="check-icon">✓</span> Screen-record exact user flows in the old system</li>
+            <li><span class="check-icon">✓</span> Extract business rules from old controllers and services</li>
+            <li><span class="check-icon">✓</span> Document edge cases: null inputs, empty states, error states</li>
+            <li><span class="check-icon">✓</span> Capture performance baseline — page load time, API response time</li>
+            <li><span class="check-icon">✓</span> Note DB state before and after each action</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- PHASE 1 -->
+    <div class="phase-card phase-1 fade-in" onclick="togglePhase(this)">
+      <div class="phase-header">
+        <div class="phase-number">1</div>
+        <div class="phase-meta">
+          <div class="phase-name">Design Evals — Write the Rulebook</div>
+          <div class="phase-timing">🎨 Before migration starts. Convert baseline into testable criteria.</div>
+        </div>
+        <div class="phase-chevron">▾</div>
+      </div>
+      <div class="phase-body">
+        <div class="phase-body-inner">
+          <p class="phase-desc">Three layers of eval criteria. All three required.</p>
+          <table class="eval-table">
+            <thead>
+              <tr>
+                <th>Layer</th>
+                <th>What You're Checking</th>
+                <th>Example</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td style="color:var(--accent);font-weight:500">Layer 1<br><span style="font-size:11px;font-family:'DM Mono',monospace">API Contract</span></td>
+                <td>Same request in → Same response shape out</td>
+                <td>POST /Invoice/Generate returns same JSON structure</td>
+              </tr>
+              <tr>
+                <td style="color:var(--accent2);font-weight:500">Layer 2<br><span style="font-size:11px;font-family:'DM Mono',monospace">Business Logic</span></td>
+                <td>Business rules preserved exactly</td>
+                <td>Discount applied before tax, not after</td>
+              </tr>
+              <tr>
+                <td style="color:var(--accent3);font-weight:500">Layer 3<br><span style="font-size:11px;font-family:'DM Mono',monospace">UI Behavior</span></td>
+                <td>Angular behaves like old Razor view</td>
+                <td>Same validation messages, loading states, error handling</td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="code-block">
+<span class="comment">// Example: Business Logic Eval Criteria</span>
+Rule 1: <span class="hl">Discount applied BEFORE tax</span>
+Rule 2: <span class="hl">Line items with qty=0 excluded from total</span>
+Rule 3: <span class="hl">PDF generated ONLY when status = "Approved"</span>
+Rule 4: <span class="hl">Audit log entry created on every generation</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PHASE 2 -->
+    <div class="phase-card phase-2 fade-in" onclick="togglePhase(this)">
+      <div class="phase-header">
+        <div class="phase-number">2</div>
+        <div class="phase-meta">
+          <div class="phase-name">Migrate the Slice — Copilot Does the Heavy Lifting</div>
+          <div class="phase-timing">🔨 Order matters. Never migrate FE and BE simultaneously.</div>
+        </div>
+        <div class="phase-chevron">▾</div>
+      </div>
+      <div class="phase-body">
+        <div class="phase-body-inner">
+          <p class="phase-desc">Always stable, verified backend before UI is built on top of it.</p>
+          <div class="order-steps">
+            <div class="order-step">
+              <div class="order-step-num">1st</div>
+              <div class="order-step-label">Migrate BE Service Layer</div>
+              <div class="order-step-tag">→ Run Layer 2 evals immediately</div>
+            </div>
+            <div class="order-step">
+              <div class="order-step-num">2nd</div>
+              <div class="order-step-label">Migrate .NET Core API Endpoint</div>
+              <div class="order-step-tag">→ Run Layer 1 evals. Old & new run in parallel.</div>
+            </div>
+            <div class="order-step">
+              <div class="order-step-num">3rd</div>
+              <div class="order-step-label">Migrate Angular Component</div>
+              <div class="order-step-tag">→ Run Layer 3 evals. Point to new API.</div>
+            </div>
+          </div>
+          <p style="color:var(--text-muted);font-size:13px;margin-top:8px;">⚡ <strong style="color:var(--text)">Why this order?</strong> You always want a stable verified backend before you build UI on top of it. Migrating FE and BE simultaneously means you can't isolate where bugs came from.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- PHASE 3 -->
+    <div class="phase-card phase-3 fade-in" onclick="togglePhase(this)">
+      <div class="phase-header">
+        <div class="phase-number">3</div>
+        <div class="phase-meta">
+          <div class="phase-name">Run Evals — Automated Pipeline</div>
+          <div class="phase-timing">🏃 Triggered on every PR. Zero manual testing gaps.</div>
+        </div>
+        <div class="phase-chevron">▾</div>
+      </div>
+      <div class="phase-body">
+        <div class="phase-body-inner">
+          <p class="phase-desc">The pipeline runs after every migrated module. Not just the ones testers happen to check.</p>
+          <div class="pipeline">
+            <div class="pipeline-step">
+              <div class="pipeline-left">
+                <div class="pipeline-dot" style="background:rgba(61,127,255,0.15);color:var(--accent);font-size:12px;">PR</div>
+                <div class="pipeline-line"></div>
+              </div>
+              <div class="pipeline-content">
+                <div class="pipeline-content-title">Engineer raises PR for migrated module</div>
+                <div class="pipeline-content-desc">Triggers automated pipeline</div>
+              </div>
+            </div>
+            <div class="pipeline-step">
+              <div class="pipeline-left">
+                <div class="pipeline-dot" style="background:rgba(255,176,32,0.15);color:var(--warn);font-size:14px;">①</div>
+                <div class="pipeline-line"></div>
+              </div>
+              <div class="pipeline-content">
+                <div class="pipeline-content-title">Validation Pipeline</div>
+                <div class="pipeline-content-desc">Build check → Lint → Unit tests → "Does it compile and run?"</div>
+              </div>
+            </div>
+            <div class="pipeline-step">
+              <div class="pipeline-left">
+                <div class="pipeline-dot" style="background:rgba(0,212,170,0.15);color:var(--accent2);font-size:14px;">②</div>
+                <div class="pipeline-line"></div>
+              </div>
+              <div class="pipeline-content">
+                <div class="pipeline-content-title">Eval Pipeline</div>
+                <div class="pipeline-content-desc">API contract diff → Business rule scenarios → UI snapshot (Playwright) → Perf benchmark → "Does it do the RIGHT thing?"</div>
+              </div>
+            </div>
+            <div class="pipeline-step">
+              <div class="pipeline-left">
+                <div class="pipeline-dot" style="background:rgba(0,212,170,0.15);color:var(--accent2);font-size:12px;">✓</div>
+                <div class="pipeline-line"></div>
+              </div>
+              <div class="pipeline-content">
+                <div class="pipeline-content-title" style="color:var(--green)">PASS → PR approved for merge</div>
+                <div class="pipeline-content-desc">All evals green. Module verified.</div>
+              </div>
+            </div>
+            <div class="pipeline-step">
+              <div class="pipeline-left">
+                <div class="pipeline-dot" style="background:rgba(255,61,90,0.15);color:var(--red);font-size:12px;">✗</div>
+                <div class="pipeline-line"></div>
+              </div>
+              <div class="pipeline-content">
+                <div class="pipeline-content-title" style="color:var(--red)">FAIL → Flagged with exact failing eval + diff shown</div>
+                <div class="pipeline-content-desc">Engineer sees exactly which rule failed, which line, which sprint</div>
+              </div>
+            </div>
+          </div>
+          <div class="code-block">
+<span class="err">❌ EVAL FAILED — Business Rule: Discount Calculation</span>
+
+Input:  { subtotal: 10000, discount_pct: 10, tax_pct: 18 }
+
+<span class="ok">Expected (old system):  { total: 10620 }</span>  <span class="comment">← discount first, then tax</span>
+<span class="err">Actual   (new system):  { total: 10440 }</span>  <span class="comment">← tax first, then discount</span>
+
+Module: <span class="warn">InvoiceService.cs → Line 47</span>
+Sprint: 2 | PR: #134
+<span class="ok">Flagged before UAT. Fix required before merge.</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PHASE 4 -->
+    <div class="phase-card phase-4 fade-in" onclick="togglePhase(this)">
+      <div class="phase-header">
+        <div class="phase-number">4</div>
+        <div class="phase-meta">
+          <div class="phase-name">Analyze, Fix & Re-run</div>
+          <div class="phase-timing">🔁 Fix flagged issue → Re-run evals → Green → Merge</div>
+        </div>
+        <div class="phase-chevron">▾</div>
+      </div>
+      <div class="phase-body">
+        <div class="phase-body-inner">
+          <p class="phase-desc">Track these metrics per slice. This is your delivery evidence for leadership.</p>
+          <table class="eval-table">
+            <thead>
+              <tr><th>Metric</th><th>Why It Matters for Managers</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td style="color:var(--accent2)">First-pass eval pass rate</td>
+                <td>Measures Copilot accuracy on this module type</td>
+              </tr>
+              <tr>
+                <td style="color:var(--accent2)">Business rule failures</td>
+                <td>Flags complexity — may need more human review</td>
+              </tr>
+              <tr>
+                <td style="color:var(--accent2)">Migration vs verification time</td>
+                <td>True velocity, not just code-written velocity</td>
+              </tr>
+              <tr>
+                <td style="color:var(--accent2)">Defects caught pre vs post UAT</td>
+                <td>Proves eval pipeline ROI to leadership</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- PHASE 5 -->
+    <div class="phase-card phase-5 fade-in" onclick="togglePhase(this)">
+      <div class="phase-header">
+        <div class="phase-number">5</div>
+        <div class="phase-meta">
+          <div class="phase-name">Slice Sign-off & Next Slice</div>
+          <div class="phase-timing">🚀 All green. Stakeholder demo done. Then — and only then — next slice.</div>
+        </div>
+        <div class="phase-chevron">▾</div>
+      </div>
+      <div class="phase-body">
+        <div class="phase-body-inner">
+          <p class="phase-desc">Every item must be checked before moving on. No exceptions.</p>
+          <div class="signoff-grid">
+            <div class="signoff-item"><span class="signoff-check">✅</span> All Layer 1 evals passing (API contracts)</div>
+            <div class="signoff-item"><span class="signoff-check">✅</span> All Layer 2 evals passing (business rules)</div>
+            <div class="signoff-item"><span class="signoff-check">✅</span> All Layer 3 evals passing (UI behavior)</div>
+            <div class="signoff-item"><span class="signoff-check">✅</span> Performance baseline met or exceeded</div>
+            <div class="signoff-item"><span class="signoff-check">✅</span> Old and new ran in parallel — behavior matched</div>
+            <div class="signoff-item"><span class="signoff-check">✅</span> Stakeholder demo completed on this slice</div>
+            <div class="signoff-item"><span class="signoff-check">✅</span> Eval results documented for audit trail</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FLOW DIAGRAM -->
+<section class="flow-section" id="section3">
+  <div class="container">
+    <div class="section-header fade-in">
+      <div class="section-label">Full Picture</div>
+      <div class="section-title">One Slice, Start to Finish</div>
+      <p class="section-desc">The complete flow — from picking the slice to signing off and moving to the next.</p>
+    </div>
+    <div class="flow-diagram fade-in">
+      <div class="flow-row">
+        <div class="flow-box accent">📌 Pick the Slice</div>
+        <div class="flow-arrow">↓</div>
+        <div class="flow-box">📸 Capture Baseline (answer key)</div>
+        <div class="flow-arrow">↓</div>
+        <div class="flow-box">📝 Design Evals (write the test)</div>
+        <div class="flow-arrow">↓</div>
+        <div class="flow-box">🔧 Migrate BE Service → Run Evals → Fix → Green</div>
+        <div class="flow-arrow">↓</div>
+        <div class="flow-box">⚙️ Migrate API Endpoint → Run Evals → Fix → Green</div>
+        <div class="flow-arrow">↓</div>
+        <div class="flow-box">🖥️ Migrate Angular Component → Run Evals → Fix → Green</div>
+        <div class="flow-arrow">↓</div>
+        <div class="flow-box">🔄 Full Slice Eval Run → All Green</div>
+        <div class="flow-arrow">↓</div>
+        <div class="flow-box">⚖️ Parallel Run (old + new) → Behavior Match Confirmed</div>
+        <div class="flow-arrow">↓</div>
+        <div class="flow-box green">✅ Sign Off → Next Slice</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- RISKS -->
+<section class="risks-section" id="section4">
+  <div class="container">
+    <div class="section-header fade-in">
+      <div class="section-label" style="color:var(--danger)">⚠️ If You Skip Evals</div>
+      <div class="section-title">6 Risks That Will Explode</div>
+      <p class="section-desc">These don't announce themselves. They hide. And surface at the worst possible moment.</p>
+    </div>
+
+    <div class="risk-grid">
+      <div class="risk-card fade-in">
+        <span class="risk-number">01</span>
+        <span class="risk-icon">🕵️</span>
+        <div class="risk-title">Silent Business Logic Corruption</div>
+        <p class="risk-desc">Business rules migrate incorrectly but look correct on the surface. The code compiles. Tests pass. CI/CD is green. But the order of operations flipped.</p>
+        <div class="risk-impact">On a ₹10L invoice, a discount-tax ordering flip = ₹15,000 difference. 400 invoices. 6 weeks. Nobody notices.</div>
+      </div>
+
+      <div class="risk-card fade-in">
+        <span class="risk-number">02</span>
+        <span class="risk-icon">🔍</span>
+        <div class="risk-title">No Rollback Evidence</div>
+        <p class="risk-desc">Something breaks in production. Your team tries to figure out which module caused it and when. No baseline. No comparison. No paper trail.</p>
+        <div class="risk-impact">MTTR explodes. A 2-hour fix becomes a 2-day investigation.</div>
+      </div>
+
+      <div class="risk-card fade-in">
+        <span class="risk-number">03</span>
+        <span class="risk-icon">🤖</span>
+        <div class="risk-title">Copilot Confidence Trap</div>
+        <p class="risk-desc">Copilot generates clean, well-structured code that looks right. But it doesn't know your business. It doesn't know the 2019 workaround that never got documented.</p>
+        <div class="risk-impact">You shipped AI-generated code that your team approved visually. Nobody tested outcomes. Liability sits with you.</div>
+      </div>
+
+      <div class="risk-card fade-in">
+        <span class="risk-number">04</span>
+        <span class="risk-icon">❄️</span>
+        <div class="risk-title">Regression Snowball</div>
+        <p class="risk-desc">Sprint 1: 10 modules, no evals. Sprint 2: 10 more. A bug appears. Is it sprint 1 or sprint 2? Without evals per module, you can't isolate where regression entered.</p>
+        <div class="risk-impact">You're re-testing everything from scratch. Sprint velocity collapses. Deadline slips.</div>
+      </div>
+
+      <div class="risk-card fade-in">
+        <span class="risk-number">05</span>
+        <span class="risk-icon">😰</span>
+        <div class="risk-title">Client Acceptance Risk</div>
+        <p class="risk-desc">UAT arrives. Client finds 40 defects. Your team scrambles. The client loses confidence. Every screen they test, they're now suspicious.</p>
+        <div class="risk-impact">UAT becomes adversarial instead of confirmatory. Relationship damage. Potential penalty clauses triggered.</div>
+      </div>
+
+      <div class="risk-card fade-in">
+        <span class="risk-number">06</span>
+        <span class="risk-icon">📊</span>
+        <div class="risk-title">No Measurement of AI Quality</div>
+        <p class="risk-desc">You used Copilot to accelerate migration. Leadership asks: "How much did it actually help? Can we trust it on the next engagement?" Without evals, you have no data.</p>
+        <div class="risk-impact">You lose the ability to prove ROI on your AI investment. You can't improve the process for the next project.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- MANAGER TABLE -->
+<section class="manager-table-section" id="section5">
+  <div class="container">
+    <div class="section-header fade-in">
+      <div class="section-label">Manager View</div>
+      <div class="section-title">Every Concern, Addressed</div>
+    </div>
+    <table class="mgr-table fade-in">
+      <thead>
+        <tr>
+          <th>Manager Concern</th>
+          <th>How This Approach Addresses It</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>"How do we know it works?"</td>
+          <td>Eval results are the evidence, not engineer opinion. Every slice has a documented pass report before sign-off.</td>
+        </tr>
+        <tr>
+          <td>"What if Copilot gets it wrong?"</td>
+          <td>Evals catch it before it merges — not after it ships. The pipeline is the safety net.</td>
+        </tr>
+        <tr>
+          <td>"How do we report progress?"</td>
+          <td>Slices completed + eval pass rates = objective, reportable status. Not vibes.</td>
+        </tr>
+        <tr>
+          <td>"What's our rollback plan?"</td>
+          <td>Each slice is independently verified. Rollback is clean and scoped — not a full system revert.</td>
+        </tr>
+        <tr>
+          <td>"How long will this take?"</td>
+          <td>Slice velocity becomes predictable after slice 2-3. You build a reliable forecast, not a guess.</td>
+        </tr>
+        <tr>
+          <td>"Can we prove Copilot's ROI?"</td>
+          <td>First-pass accuracy rate per module type, time saved vs time spent fixing — all measured, all reported.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- FINAL BANNER -->
+<section class="final-banner">
+  <div class="container">
+    <div class="banner-card fade-in">
+      <div class="banner-quote">
+        We are not migrating a codebase.<br>
+        We are migrating <span class="hl">verified behavior</span>,<br>one slice at a time.
+      </div>
+      <p class="banner-sub">The difference is — at the end, we can <strong>prove</strong> it works. Not hope it works.</p>
+      <div style="margin-top:32px;display:flex;flex-wrap:wrap;gap:12px;justify-content:center;">
+        <div style="background:rgba(255,61,90,0.1);border:1px solid rgba(255,61,90,0.2);border-radius:10px;padding:12px 20px;font-size:13px;color:rgba(255,61,90,0.9)">
+          ❌ Ship without evals = trusting AI blindly
+        </div>
+        <div style="background:rgba(0,212,170,0.1);border:1px solid rgba(0,212,170,0.2);border-radius:10px;padding:12px 20px;font-size:13px;color:var(--accent2)">
+          ✅ Ship with evals = paper trail that every module behaved correctly
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  VERTICAL SLICE MIGRATION PLAYBOOK &nbsp;·&nbsp; .NET MVC → ANGULAR + .NET CORE &nbsp;·&nbsp; BUILT WITH EVALS
+</footer>
+
+<script>
+  // Toggle phases
+  function togglePhase(card) {
+    const isActive = card.classList.contains('active');
+    // Close all
+    document.querySelectorAll('.phase-card').forEach(c => c.classList.remove('active'));
+    // Open clicked if wasn't active
+    if (!isActive) card.classList.add('active');
+  }
+
+  // Scroll animations
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('visible');
+      }
+    });
+  }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+
+  document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+
+  // Nav dots
+  const sections = ['section0','section1','section2','section3','section4','section5'];
+  const dots = document.querySelectorAll('.nav-dot');
+
+  const sectionObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        const idx = sections.indexOf(entry.target.id);
+        dots.forEach(d => d.classList.remove('active'));
+        if (idx >= 0) dots[idx].classList.add('active');
+      }
+    });
+  }, { threshold: 0.4 });
+
+  sections.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) sectionObserver.observe(el);
+  });
+
+  dots.forEach((dot, i) => {
+    dot.addEventListener('click', () => {
+      document.getElementById(sections[i])?.scrollIntoView({ behavior: 'smooth' });
+    });
+  });
+</script>
+</body>
+</html>
