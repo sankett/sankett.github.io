@@ -1,0 +1,796 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GenAI Metrics Field Guide — Every Metric, Worked Examples</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Ubuntu,sans-serif; line-height:1.6; color:#333;
+ background:linear-gradient(135deg,#f5f7fa 0%,#c3cfe2 100%); padding:30px 15px; }
+.container { max-width:1080px; margin:0 auto; background:#fff; border-radius:12px; box-shadow:0 8px 32px rgba(0,0,0,.1); overflow:hidden; }
+header { background:linear-gradient(135deg,#1f3864,#2d5a8a); color:#fff; padding:36px 40px; text-align:center; }
+h1 { font-size:1.9em; margin-bottom:8px; }
+.tagline { opacity:.95; font-style:italic; }
+main { padding:34px 40px; }
+h2 { color:#1f3864; font-size:1.55em; margin:34px 0 14px; border-bottom:3px solid #2d5a8a; padding-bottom:7px; }
+h4 { color:#2d5a8a; margin:16px 0 8px; font-size:1.02em; }
+p { margin-bottom:10px; } ol,ul { margin:0 0 10px 22px; } li { margin-bottom:6px; }
+table { width:100%; border-collapse:collapse; margin:12px 0; font-size:.92em; }
+th { background:#1f3864; color:#fff; padding:8px 10px; text-align:left; }
+td { padding:8px 10px; border-bottom:1px solid #dee2e6; vertical-align:top; }
+table.mini th, table.mini td { padding:6px 9px; }
+table.models td:first-child { white-space:nowrap; width:150px; }
+.pill { display:inline-block; padding:2px 10px; border-radius:12px; font-size:.78em; font-weight:700; white-space:nowrap; vertical-align:middle; }
+.blue { background:#d9e2f2; color:#003366; } .green { background:#d3f9d8; color:#2b6a2f; }
+.l1 { background:#c6e0b4; color:#2d5016; } .l2 { background:#ffe699; color:#664d00; } .l3 { background:#f8cbad; color:#7a3b00; }
+.tm { background:#e2d9f3; color:#3b2a66; } .ms { background:#d0e7f5; color:#0b4a6f; }
+.fp { background:#fde2cf; color:#7a3b00; } .ob { background:#d9f2e5; color:#1d5c40; }
+.card { border:1px solid #d5dbe5; border-radius:10px; margin:14px 0; background:#fbfcfe; }
+.card summary { cursor:pointer; padding:14px 18px; font-weight:700; color:#1f3864; font-size:1.05em; list-style:none; }
+.card summary::-webkit-details-marker { display:none; }
+.card summary:before { content:"▸ "; } .card[open] summary:before { content:"▾ "; }
+.card .inner { padding:4px 22px 18px; border-top:1px solid #e4e8ef; }
+.code { background:#1f3864; color:#fff; border-radius:6px; padding:2px 8px; font-family:Consolas,monospace; font-size:.85em; }
+.meta { font-weight:400; font-size:.82em; color:#667; }
+.client-line { background:#e7f3ff; border-left:4px solid #0056b3; padding:10px 14px; border-radius:5px; margin:10px 0; }
+.note { font-size:.9em; color:#555; font-style:italic; }
+.callout { border-left:5px solid; padding:14px 16px; margin:14px 0; border-radius:6px; }
+.warn { background:#fff3cd; border-color:#ff8c00; } .ok { background:#d3f9d8; border-color:#2f9e44; }
+.info { background:#e7f3ff; border-color:#0056b3; } .danger { background:#ffe0e0; border-color:#c92a2a; }
+nav.sticky { position:sticky; top:0; z-index:5; background:#fffffff2; backdrop-filter:blur(4px); border-bottom:1px solid #d5dbe5;
+ padding:8px 40px; font-size:.85em; line-height:2; }
+nav.sticky a { color:#1f3864; text-decoration:none; font-weight:600; padding:1px 5px; border-radius:4px; }
+nav.sticky a:hover { background:#d9e2f2; }
+.navgrp { font-weight:800; padding:1px 7px; border-radius:8px; font-size:.85em; }
+code { background:#eef1f6; padding:1px 5px; border-radius:3px; font-family:Consolas,monospace; font-size:.9em; }
+.footer { background:#f8f9fa; padding:22px 40px; border-top:1px solid #dee2e6; text-align:center; color:#666; font-size:.88em; }
+</style>
+</head>
+<body>
+<div class="container">
+<header>
+<h1>📖 GenAI Metrics Field Guide</h1>
+<p class="tagline">Every metric explained with a worked example — capture it, baseline it, track it, and turn it into money the client recognizes</p>
+</header>
+<nav class="sticky"><span class="navgrp l1">L1</span> <a href="#s3">S3</a> <a href="#q1">Q1</a> <a href="#q3">Q3</a> <a href="#s4">S4</a> <a href="#s5">S5</a> <a href="#a1">A1</a> <a href="#i2">I2</a> <a href="#a5">A5</a> &nbsp;·&nbsp; <span class="navgrp l2">L2</span> <a href="#s1">S1</a> <a href="#s2">S2</a> <a href="#q2">Q2</a> <a href="#q8">Q8</a> <a href="#e1">E1</a> <a href="#e3">E3</a> <a href="#a2">A2</a> <a href="#e2">E2</a> &nbsp;·&nbsp; <span class="navgrp l3">L3</span> <a href="#a3">A3</a> <a href="#q5">Q5</a> <a href="#q6">Q6</a> <a href="#q7">Q7</a> <a href="#a4">A4</a> <a href="#s6">S6</a> <a href="#i1">I1</a> <a href="#i4">I4</a></nav>
+<main>
+
+<h2>How to read this guide</h2>
+<p>Each metric below is a self-contained card with the same 7 parts: <strong>What it is → How to capture →
+Baseline → Track → Execution-model lens → Blue/Green &amp; the Green conversion → Watch-outs</strong>. Click any
+card to expand it; use the sticky bar to jump. The cards use the same IDs as the
+<em>GenAI-Effectiveness-Metrics.xlsx</em> workbook — capture the numbers here, record them there.</p>
+
+<div class="callout info"><strong>Every Green claim in this guide follows one discipline:</strong> a
+<strong>Trigger</strong> (the metric movement automatically causes an action, not just a report), an
+<strong>Owner</strong> (one named person, never "the team"), and a <strong>Measure</strong> (track what changed
+because of the action, with a verification date). Efficiency claims without these three stay Blue forever — saved
+time that nobody re-allocates simply evaporates into everyday comfort. When hours ARE freed, make the allocation
+decision explicit: <strong>Redeploy</strong> them (to billable/backlog work), <strong>Resize</strong> (absorb
+growth without hiring), or <strong>Reinvest</strong> (build a new offering).</div>
+
+<h2>The four example teams (used throughout)</h2>
+
+<table>
+<tr><th>Team</th><th>Model</th><th>Size</th><th>Assumed toolchain</th><th>Commercial context</th></tr>
+<tr><td><strong>Team Nova</strong></td><td><span class="pill tm">T&amp;M</span></td><td>8 devs</td><td>Jira + GitHub + GitHub Actions + Copilot Business</td><td>Billed $50/hr blended; client pays for time, so freed hours must become billable work</td></tr>
+<tr><td><strong>Team Atlas</strong></td><td><span class="pill ms">Managed Services</span></td><td>12 devs</td><td>ServiceNow + Azure DevOps (Boards/Repos/Pipelines) + Copilot</td><td>Fixed monthly fee, SLA penalties ~$25K per breach; margin grows when same team serves more</td></tr>
+<tr><td><strong>Team Phoenix</strong></td><td><span class="pill fp">Fixed Price</span></td><td>10 devs</td><td>Jira + GitLab + Jenkins + SonarQube + Copilot</td><td>$2.4M / 12-month fixed bid; every saved hour is margin — if tracked</td></tr>
+<tr><td><strong>Team Vega</strong></td><td><span class="pill ob">Outcome-Based</span></td><td>6 devs</td><td>Azure DevOps + SonarQube + Copilot</td><td>Paid on contracted KPIs: 99.5% uptime, zero Sev1 escapes, defect-fix SLA</td></tr>
+</table>
+<p><strong>Two models often forgotten:</strong> <em>Staff Augmentation</em> (individuals billed into a client team — team metrics don't apply cleanly; measure at the client-team level and never per person) and <em>Dedicated Capacity / ODC</em> (behaves like Managed Services for measurement: fixed capacity, value = more delivered per FTE).</p>
+
+
+<h2>Level 1 — start now, existing tools <span class="pill l1">Weeks 1-6</span></h2>
+
+<details class="card" id="s3">
+<summary><span class="code">S3</span> Deployment frequency &nbsp; <span class="pill l1">Level 1 · start now</span> <span class="pill blue">Blue Money</span></summary>
+<div class="inner">
+<h4>1 · What it is</h4><p>How often the team puts code into production. It is the "pulse rate" of delivery — frequent, small,
+boring releases are the hallmark of a healthy pipeline. <br><strong>10-second example:</strong> Team Nova deployed
+9 times in June across 4 weeks → <code>2.25 deploys/week</code>.</p>
+<h4>2 · How to capture it <span class="meta">Example stack: Team Nova (T&M · GitHub Actions) · Owner: Scrum Master · Monthly · Effort: ~10 min</span></h4>
+<ol><li>Identify the production deploy workflow (e.g. <code>deploy-prod.yml</code>).</li><li>Monthly, count successful runs: <code>Actions → deploy-prod → Status: success → date filter</code>, or CLI: <code>gh run list --workflow deploy-prod --status success --created 2026-06-01..2026-06-30</code>.</li><li>Divide by weeks in the period; type into the Baseline Tracker.</li><li>Jenkins: count successful builds of the prod job. ADO: Releases → prod stage succeeded count.</li></ol>
+<h4>3 · Baseline it</h4><p>Nova pulls 4 months of history <em>before Copilot rollout</em>: 34 successful prod deploys over 17 weeks
+→ <strong>baseline = 2.0 deploys/week</strong>. Written once into the Baseline column; never edited again.</p>
+<h4>4 · Track improvements</h4>
+<table class="mini"><tr><th></th><th>Baseline</th><th>Q1</th><th>Q2</th><th>Read</th></tr><tr><td>Deploys/week</td><td>2.0</td><td>2.5</td><td>3.0</td><td>Rising ✓</td></tr><tr><td>Change failure rate (pair)</td><td>15%</td><td>15%</td><td>14%</td><td>Stable ✓</td></tr></table>
+<p>Frequency rose 50% with CFR flat — a genuine, safe speed-up. If CFR had climbed to 22%, the same
+frequency number would be a warning, not a win. Never read this metric alone.</p>
+<h4>5 · What it means in each execution model</h4>
+<table class="mini models"><tr><td><span class="pill tm">T&amp;M</span></td><td>Client experiences faster feature flow — supports renewals and expansion conversations; more deploys of billable work.</td></tr><tr><td><span class="pill ms">Managed Services</span></td><td>Smaller, more frequent changes = lower change risk = fewer SLA-threatening incidents.</td></tr><tr><td><span class="pill fp">Fixed Price</span></td><td>Frequent integration protects milestones — big-bang integration is the classic fixed-price killer.</td></tr><tr><td><span class="pill ob">Outcome-Based</span></td><td>Enables the contracted outcomes: you cannot hit uptime/adoption milestones you can't ship toward.</td></tr></table><p class="note">Staff Aug: measure at the client-team level only; an individual's 'deploy count' is meaningless.</p>
+<h4>6 · <span class="pill blue">Blue Money</span> — and the path to Green</h4>
+<p><strong>Classification:</strong> Blue — context metric.</p><p>Alone it stays Blue. It becomes part of a Green story only when
+paired with change failure rate: <em>"Release cadence up 50% with zero stability loss — features now reach the
+business in days, not weeks."</em> To make it stick: <strong>Trigger</strong> — monthly delivery review flags any
+frequency drop; <strong>Owner</strong> — Scrum Master; <strong>Measure</strong> — deploys/week alongside CFR.</p>
+<div class="client-line">🗣 <strong>Say it to the client:</strong> “We ship 50% more often with no increase in failures — your features reach users faster at the same risk level.”</div>
+<h4>7 · Watch-outs</h4>
+<ul><li><strong>Gaming risk:</strong> Deploying trivial/no-op changes to inflate the count.</li>
+<li><strong>Counterbalance with:</strong> Q1 Change failure rate</li>
+<li><strong>Common mistake:</strong> Comparing frequency across teams with different release models (mobile app store vs web) — trend each team against its own baseline only.</li></ul>
+</div></details>
+<details class="card" id="q1">
+<summary><span class="code">Q1</span> Change failure rate (CFR) &nbsp; <span class="pill l1">Level 1 · start now</span> <span class="pill green">Green Money</span></summary>
+<div class="inner">
+<h4>1 · What it is</h4><p>Of everything deployed, what % broke production and needed a hotfix, patch or rollback?
+<br><strong>10-second example:</strong> Atlas made 20 deployments in June; 3 required emergency fixes →
+<code>CFR = 15%</code>.</p>
+<h4>2 · How to capture it <span class="meta">Example stack: Team Atlas (Managed Services · ADO + ServiceNow) · Owner: Tech Lead · Monthly · Effort: ~20 min</span></h4>
+<ol><li>Adopt one convention: every emergency fix release is tagged <code>hotfix</code> (ADO release tag / work item tag).</li><li>Monthly: count total prod deployments (Pipelines → Releases) and hotfix-tagged ones.</li><li>Cross-check with ServiceNow: incidents whose 'caused by change' field links to a deployment.</li><li>CFR = hotfix or rollback deployments ÷ total deployments.</li></ol>
+<h4>3 · Baseline it</h4><p>Atlas reviews 4 months pre-GenAI: 26 deployments, 4 needed hotfixes → <strong>baseline CFR = 15.4%</strong>.
+(DORA elite benchmark is ~5% — directional, not pass/fail.)</p>
+<h4>4 · Track improvements</h4>
+<table class="mini"><tr><th></th><th>Baseline</th><th>Q1 (AI ramp)</th><th>Q2</th><th>Read</th></tr><tr><td>CFR</td><td>15.4%</td><td>18%</td><td>12%</td><td>Dip then improve</td></tr><tr><td>Deploys/week (pair)</td><td>1.6</td><td>1.9</td><td>2.2</td><td>Rising ✓</td></tr></table>
+<p>The Q1 bump is the classic GenAI ramp pattern — more AI code merged before review practices caught up.
+Atlas responded with an AI-code review checklist; by Q2, CFR beat baseline <em>while shipping more</em>. That
+recovery story is more credible to a client than a suspiciously perfect line.</p>
+<h4>5 · What it means in each execution model</h4>
+<table class="mini models"><tr><td><span class="pill tm">T&amp;M</span></td><td>High CFR erodes client trust and renewal probability — the T&M contract's real currency.</td></tr><tr><td><span class="pill ms">Managed Services</span></td><td>Most direct money link: each SLA breach costs Atlas ~$25K. CFR is the leading indicator of breaches.</td></tr><tr><td><span class="pill fp">Fixed Price</span></td><td>Every failed change consumes unpaid rework hours straight out of the fixed-price margin.</td></tr><tr><td><span class="pill ob">Outcome-Based</span></td><td>Often literally a contracted KPI ('zero Sev1 escapes'). CFR movement = payment movement.</td></tr></table>
+<h4>6 · <span class="pill green">Green Money</span> — and the path to Green</h4>
+<p><strong>Classification:</strong> Green — outcome metric.</p><p>Convert via the incident cost model agreed with Finance:
+(avoided failures × cost per failure) + (avoided SLA penalties). <strong>Trigger</strong> — CFR above baseline for
+2 consecutive months auto-opens a review-process action; <strong>Owner</strong> — Tech Lead;
+<strong>Measure</strong> — CFR × agreed $-per-failure, reported quarterly.</p>
+<div class="client-line">🗣 <strong>Say it to the client:</strong> “Failure rate fell from 15% to 12% while deploying 37% more — that's 3 fewer emergency fixes and ~$75K in penalty exposure avoided this year.”</div>
+<h4>7 · Watch-outs</h4>
+<ul><li><strong>Gaming risk:</strong> Quietly shipping fixes as 'features' to avoid the hotfix tag — reconcile against ITSM incident records monthly.</li>
+<li><strong>Counterbalance with:</strong> S3 Deployment frequency</li>
+<li><strong>Common mistake:</strong> Counting all bugs as change failures. CFR counts only deployment-caused production failures.</li></ul>
+</div></details>
+<details class="card" id="q3">
+<summary><span class="code">Q3</span> Defect density &nbsp; <span class="pill l1">Level 1 · start now</span> <span class="pill green">Green Money</span></summary>
+<div class="inner">
+<h4>1 · What it is</h4><p>Production bugs logged per release — the honest counterweight to "we write code faster now."
+<br><strong>10-second example:</strong> Phoenix shipped 3 releases in June with 11 production bugs →
+<code>3.7 defects/release</code>.</p>
+<h4>2 · How to capture it <span class="meta">Example stack: Team Phoenix (Fixed Price · Jira + GitLab) · Owner: QA Lead · Monthly · Effort: ~15 min</span></h4>
+<ol><li>Ensure prod bugs carry <code>Environment = Production</code> (or an agreed label) in Jira.</li><li>Monthly JQL: <code>project = PHX AND type = Bug AND environment = Production AND created >= startOfMonth(-1)</code>.</li><li>Divide by releases shipped in the same window.</li><li>ADO equivalent: Boards query, Type=Bug, Found-In=Production, date range.</li></ol>
+<h4>3 · Baseline it</h4><p>Phoenix, 4 months pre-GenAI: 47 production bugs across 12 releases → <strong>baseline = 3.9 defects/release</strong>.
+Also record severity mix (2 critical, 18 major, 27 minor) — a stable count with worsening severity is still a regression.</p>
+<h4>4 · Track improvements</h4>
+<table class="mini"><tr><th></th><th>Baseline</th><th>Q1</th><th>Q2</th><th>Read</th></tr><tr><td>Defects/release</td><td>3.9</td><td>4.6</td><td>4.1</td><td>Bump, recovering</td></tr><tr><td>Cycle time (pair)</td><td>5.0d</td><td>4.4d</td><td>4.2d</td><td>Faster ✓</td></tr></table>
+<p>Speed improved but defects rose — gains partially borrowed from quality. Phoenix added AI-generated-code
+test requirements; Q2 shows recovery. If Q3 doesn't return to ≤ baseline, the honest conclusion is that GenAI has
+not yet paid off on this team — say so, and fix the test safety net first.</p>
+<h4>5 · What it means in each execution model</h4>
+<table class="mini models"><tr><td><span class="pill tm">T&amp;M</span></td><td>Client is billed for defect fixing — rising density means paying twice, a renewal killer.</td></tr><tr><td><span class="pill ms">Managed Services</span></td><td>Defects convert to incident volume → SLA exposure and support cost.</td></tr><tr><td><span class="pill fp">Fixed Price</span></td><td>Warranty-period defect fixing is free work; every escaped defect is direct margin erosion.</td></tr><tr><td><span class="pill ob">Outcome-Based</span></td><td>Frequently a contracted KPI (defect SLA); density trend predicts contract compliance.</td></tr></table>
+<h4>6 · <span class="pill green">Green Money</span> — and the path to Green</h4>
+<p><strong>Classification:</strong> Green — outcome metric.</p><p>Convert via avoided rework: defects avoided × average fix cost
+(Phoenix measures ~6 engineer-hours per prod defect ≈ $300 at cost). <strong>Trigger</strong> — density above
+baseline auto-adds 'strengthen tests for AI code' to the sprint; <strong>Owner</strong> — QA Lead;
+<strong>Measure</strong> — defects/release × fix cost, quarterly.</p>
+<div class="client-line">🗣 <strong>Say it to the client:</strong> “Quality held: after a controlled ramp, defect density is back at baseline while delivery is 16% faster — speed did not come out of quality.”</div>
+<h4>7 · Watch-outs</h4>
+<ul><li><strong>Gaming risk:</strong> Not logging small prod bugs. Spot-audit support channels/ITSM monthly.</li>
+<li><strong>Counterbalance with:</strong> S1 Cycle time</li>
+<li><strong>Common mistake:</strong> Ignoring severity mix — 4 minor bugs ≠ 4 criticals.</li></ul>
+</div></details>
+<details class="card" id="s4">
+<summary><span class="code">S4</span> PR throughput (team) &nbsp; <span class="pill l1">Level 1 · start now</span> <span class="pill blue">Blue Money</span></summary>
+<div class="inner">
+<h4>1 · What it is</h4><p>Merged pull requests per engineer per week, reported for the <strong>team only</strong> — never per person.
+<br><strong>10-second example:</strong> Nova (8 devs) merged 109 PRs in a 4-week month → 109 ÷ 8 ÷ 4 =
+<code>3.4 PRs/eng/week</code>.</p>
+<h4>2 · How to capture it <span class="meta">Example stack: Team Nova (T&M · GitHub) · Owner: Tech Lead · Monthly · Effort: ~5 min</span></h4>
+<ol><li>Monthly GitHub search: <code>repo:ust/nova-app is:pr is:merged merged:2026-06-01..2026-06-30</code> → note the count.</li><li>Divide by team size and weeks.</li><li>GitLab: Merge request analytics. ADO: Repos → Pull Requests → Completed + date filter.</li><li>Publish only the team number. If anyone builds a per-developer league table, stop it — that path leads to gaming and burnout.</li></ol>
+<h4>3 · Baseline it</h4><p>Nova pre-GenAI: 3.4 PRs/eng/week (4-month average).</p>
+<h4>4 · Track improvements</h4>
+<table class="mini"><tr><th></th><th>Baseline</th><th>Q1</th><th>Q2</th><th>Read</th></tr><tr><td>PRs/eng/week</td><td>3.4</td><td>4.8</td><td>5.9</td><td>+74% 🚀</td></tr><tr><td>Cycle time (pair)</td><td>5.2d</td><td>5.1d</td><td>5.0d</td><td>Flat ⚠️</td></tr><tr><td>Rework rate (pair)</td><td>6%</td><td>7.5%</td><td>8%</td><td>Rising ⚠️</td></tr></table>
+<p><strong>This exact pattern is the AI Productivity Paradox</strong> (Faros 2025: +98% PRs, delivery flat).
+Nova generates far more PRs, but end-to-end delivery hasn't moved and rework is creeping up. The correct executive
+readout is NOT "throughput up 74%!" — it is "code generation is no longer our constraint; review and integration now are." </p>
+<h4>5 · What it means in each execution model</h4>
+<table class="mini models"><tr><td><span class="pill tm">T&amp;M</span></td><td>More PRs ≠ more billable value. Never show this to a T&M client as productivity — show cycle time instead.</td></tr><tr><td><span class="pill ms">Managed Services</span></td><td>Volume signal only; watch that ticket-related fixes aren't inflating it.</td></tr><tr><td><span class="pill fp">Fixed Price</span></td><td>Useful internally to see if AI is producing volume; margin case still rests on cycle time and defects.</td></tr><tr><td><span class="pill ob">Outcome-Based</span></td><td>Irrelevant to the client — only contracted KPIs matter. Internal diagnostic only.</td></tr></table><p class="note">Staff Aug: NEVER report per-individual PR counts to the client — it invites exactly the individual-ranking trap the whole framework forbids.</p>
+<h4>6 · <span class="pill blue">Blue Money</span> — and the path to Green</h4>
+<p><strong>Classification:</strong> Blue — activity metric.</p><p>Converts only through pairing: if throughput rises AND cycle time
+falls AND quality holds, then the Green claim is faster time-to-market (told through S1, not S4).
+<strong>Trigger</strong> — throughput up while cycle time flat for 2 quarters → automatic review-bottleneck
+investigation; <strong>Owner</strong> — Engineering Manager; <strong>Measure</strong> — the S4/S1/Q2 triple, together.</p>
+<div class="client-line">🗣 <strong>Say it to the client:</strong> Internal only. If asked: “Code output is up sharply; we're deliberately investing in review capacity so it converts into delivery speed rather than defects.”</div>
+<h4>7 · Watch-outs</h4>
+<ul><li><strong>Gaming risk:</strong> PR splitting (10 trivial PRs instead of 1 real one). Counter: rework rate + review turnaround.</li>
+<li><strong>Counterbalance with:</strong> S1 Cycle time + E1 DevEx</li>
+<li><strong>Common mistake:</strong> Celebrating this number in a leadership deck without its pairs — the single most common GenAI reporting mistake.</li></ul>
+</div></details>
+<details class="card" id="s5">
+<summary><span class="code">S5</span> Review turnaround time &nbsp; <span class="pill l1">Level 1 · start now</span> <span class="pill blue">Blue Money</span></summary>
+<div class="inner">
+<h4>1 · What it is</h4><p>How long a PR waits for its first review, and how long until merge. GenAI moves the delivery bottleneck
+from <em>writing</em> code to <em>reviewing</em> it — this metric watches that door.
+<br><strong>10-second example:</strong> a Nova PR opened Monday 09:00, first comment Tuesday 11:00 (26h),
+merged Wednesday 15:00 (54h total).</p>
+<h4>2 · How to capture it <span class="meta">Example stack: Team Nova (T&M · GitHub) · Owner: Tech Lead · Monthly · Effort: ~30 min manual</span></h4>
+<ol><li>Monthly, sample 25 merged PRs (every Nth from the merged list — don't cherry-pick).</li><li>For each record: opened → first review activity → merged timestamps (all on the PR timeline).</li><li>Report the medians. Automate later via API or free tooling if the client permits.</li><li>ADO: 'time to first comment' dashboard widgets exist out of the box.</li></ol>
+<h4>3 · Baseline it</h4><p>Nova pre-GenAI medians: <strong>14h to first review, 26h to merge</strong>.</p>
+<h4>4 · Track improvements</h4>
+<table class="mini"><tr><th></th><th>Baseline</th><th>Q1</th><th>Q2 (after fix)</th><th>Read</th></tr><tr><td>First review (median)</td><td>14h</td><td>22h</td><td>12h</td><td>Spike, then fixed</td></tr><tr><td>Open → merge (median)</td><td>26h</td><td>38h</td><td>24h</td><td>Recovered ✓</td></tr></table>
+<p>Q1: Copilot tripled PR volume and the review queue ballooned — coding-speed gains were being consumed
+downstream. Nova's fix: CODEOWNERS for auto-routing, a 4-hour first-response working agreement, max-400-line PR
+guideline, and lint/test bots so humans review only logic. Q2 beat baseline. <strong>This fix is usually the
+single highest-ROI action of the whole GenAI rollout.</strong></p>
+<h4>5 · What it means in each execution model</h4>
+<table class="mini models"><tr><td><span class="pill tm">T&amp;M</span></td><td>Hours in review queue are billable hours producing nothing the client can see.</td></tr><tr><td><span class="pill ms">Managed Services</span></td><td>Slow review of fix-PRs directly worsens MTTR and SLA exposure.</td></tr><tr><td><span class="pill fp">Fixed Price</span></td><td>Queue time is schedule risk — on a fixed deadline, a 3-day review lag compounds brutally.</td></tr><tr><td><span class="pill ob">Outcome-Based</span></td><td>Slows everything the contracted KPIs depend on.</td></tr></table>
+<h4>6 · <span class="pill blue">Blue Money</span> — and the path to Green</h4>
+<p><strong>Classification:</strong> Blue — converts via cycle time.</p><p>Shrinking the queue converts writing-speed into
+delivery-speed: the Green story appears in S1. <strong>Trigger</strong> — median first-review > 24h in any month
+auto-adds a review-capacity item to the retro; <strong>Owner</strong> — Tech Lead; <strong>Measure</strong> —
+review medians + cycle time.</p>
+<div class="client-line">🗣 <strong>Say it to the client:</strong> “We found the new bottleneck AI creates — review — and engineered it away; that's why cycle time fell instead of defects rising.”</div>
+<h4>7 · Watch-outs</h4>
+<ul><li><strong>Gaming risk:</strong> Rubber-stamp 'LGTM' approvals make this number look great while quality collapses. Counter: escaped defects.</li>
+<li><strong>Counterbalance with:</strong> Q4 Escaped defects / Q3 Defect density</li>
+<li><strong>Common mistake:</strong> Measuring only to-merge time; the to-first-review lag is where the queue pain actually lives.</li></ul>
+</div></details>
+<details class="card" id="a1">
+<summary><span class="code">A1</span> License utilization &nbsp; <span class="pill l1">Level 1 · start now</span> <span class="pill blue">Blue Money</span></summary>
+<div class="inner">
+<h4>1 · What it is</h4><p>Of the GenAI seats being paid for, what % see meaningful weekly use? Idle seats are the purest waste in the
+whole program. <br><strong>10-second example:</strong> the account pays for 200 Copilot seats; the admin dashboard
+shows 118 active last week → <code>59% utilization</code>.</p>
+<h4>2 · How to capture it <span class="meta">Example stack: Account level (all teams) · Copilot admin · Owner: Engineering Manager · Monthly · Effort: ~10 min</span></h4>
+<ol><li>GitHub org → Settings → Copilot → Access & usage (or the usage API). Zero setup.</li><li>Record: seats paid, weekly active users, last-activity dates.</li><li>List every seat idle ≥ 30 days by team (not by name in any report).</li><li>Same pattern for any other vendor's admin console.</li></ol>
+<h4>3 · Baseline it</h4><p>First reading after rollout month 1: 200 seats × $19/mo = <strong>$45.6K/yr spend at 59% utilization</strong>
+— i.e. ~$18.7K/yr currently buying nothing.</p>
+<h4>4 · Track improvements</h4>
+<table class="mini"><tr><th></th><th>M1</th><th>M3</th><th>M6</th><th>Read</th></tr><tr><td>Utilization</td><td>59%</td><td>74%</td><td>83%</td><td>Enablement working</td></tr><tr><td>Seats paid</td><td>200</td><td>200</td><td>170</td><td>Right-sized ✓</td></tr></table>
+<p>Months 1-3: fix enablement (training, IDE setup clinics, champions per team). Month 6: seats that stayed
+idle were surrendered at renewal — 30 seats × $19 × 12 = <strong>$6.8K/yr hard saving</strong>, and the remaining
+spend now buys real usage.</p>
+<h4>5 · What it means in each execution model</h4>
+<table class="mini models"><tr><td><span class="pill tm">T&amp;M</span></td><td>Tool cost usually sits in UST's margin — idle seats burn it directly.</td></tr><tr><td><span class="pill ms">Managed Services</span></td><td>Same: seat cost is inside the fixed fee; utilization is pure margin hygiene.</td></tr><tr><td><span class="pill fp">Fixed Price</span></td><td>Budgeted as project cost — idle seats inflate the bid or eat the margin.</td></tr><tr><td><span class="pill ob">Outcome-Based</span></td><td>Any spend not moving a contracted KPI is dead weight; utilization is the first check.</td></tr></table>
+<h4>6 · <span class="pill blue">Blue Money</span> — and the path to Green</h4>
+<p><strong>Classification:</strong> Blue — with a DIRECT Green conversion.</p><p>The cleanest conversion in the catalog:
+<strong>Trigger</strong> — any seat idle 60 days is auto-flagged for reallocation or surrender at renewal;
+<strong>Owner</strong> — Engineering Manager; <strong>Measure</strong> — license spend vs utilization, quarterly.
+The cancelled-seat invoice delta is auditable Green Money Finance accepts without argument.</p>
+<div class="client-line">🗣 <strong>Say it to the client:</strong> “We actively manage AI spend: utilization is 83% and we cut unused seats — you're not paying for shelfware.”</div>
+<h4>7 · Watch-outs</h4>
+<ul><li><strong>Gaming risk:</strong> 'Active' can mean one autocomplete a week. Use engaged-use definitions where the vendor offers them.</li>
+<li><strong>Counterbalance with:</strong> A2 AI-assisted PR share (depth, not just logins)</li>
+<li><strong>Common mistake:</strong> Publishing idle-user names — this is a budget metric, not a surveillance tool.</li></ul>
+</div></details>
+<details class="card" id="i2">
+<summary><span class="code">I2</span> Sev1/Sev2 incidents &nbsp; <span class="pill l1">Level 1 · start now</span> <span class="pill green">Green Money</span></summary>
+<div class="inner">
+<h4>1 · What it is</h4><p>Customer-impacting production incidents per quarter — the stability number executives already track, now
+watched for GenAI side-effects in both directions. <br><strong>10-second example:</strong> Atlas logged 6 Sev1+Sev2
+incidents last quarter; two were traced to rushed AI-generated changes.</p>
+<h4>2 · How to capture it <span class="meta">Example stack: Team Atlas (Managed Services · ServiceNow) · Owner: Delivery Manager · Quarterly · Effort: ~20 min</span></h4>
+<ol><li>Quarterly ServiceNow report: <code>Severity IN (1,2) AND assignment_group = Atlas AND opened_at in quarter</code>.</li><li>Tag root cause: was a recent deployment involved? Was AI-generated code implicated (from the PR tag)?</li><li>Record count + total war-room hours per incident.</li></ol>
+<h4>3 · Baseline it</h4><p>Atlas, 4 quarters pre-GenAI: 5-7 per quarter, average <strong>6</strong>. Finance-agreed cost per incident:
+~$12K (war-room hours + management time + penalty exposure).</p>
+<h4>4 · Track improvements</h4>
+<table class="mini"><tr><th></th><th>Baseline</th><th>Q1</th><th>Q2</th><th>Read</th></tr><tr><td>Sev1+Sev2 / qtr</td><td>6</td><td>7</td><td>4</td><td>Improving after ramp</td></tr><tr><td>Deploys/week (pair)</td><td>1.6</td><td>1.9</td><td>2.2</td><td>Shipping more ✓</td></tr></table>
+<p>Q2 tells a strong story: one-third fewer major incidents while deploying 37% more. The pairing matters —
+fewer incidents achieved by freezing deployments would be a failure dressed as success.</p>
+<h4>5 · What it means in each execution model</h4>
+<table class="mini models"><tr><td><span class="pill tm">T&amp;M</span></td><td>Incidents consume hours the client resents paying for; stability sells renewals.</td></tr><tr><td><span class="pill ms">Managed Services</span></td><td>THE money metric: incidents drive penalty payouts and margin-destroying firefighting inside a fixed fee.</td></tr><tr><td><span class="pill fp">Fixed Price</span></td><td>War-room time is unbudgeted free work straight from margin.</td></tr><tr><td><span class="pill ob">Outcome-Based</span></td><td>Usually contracted directly (uptime %, zero-Sev1 clauses) — incident count ≈ invoice amount.</td></tr></table>
+<h4>6 · <span class="pill green">Green Money</span> — and the path to Green</h4>
+<p><strong>Classification:</strong> Green — outcome metric.</p><p>(Baseline − actual) × $12K per incident + penalties avoided.
+<strong>Trigger</strong> — any AI-implicated Sev1 auto-triggers a review-gate retrospective;
+<strong>Owner</strong> — Delivery Manager; <strong>Measure</strong> — quarterly incident cost vs baseline, signed
+by Finance.</p>
+<div class="client-line">🗣 <strong>Say it to the client:</strong> “Two fewer major incidents per quarter at higher deploy volume = ~$96K/yr avoided cost and zero SLA penalties this year.”</div>
+<h4>7 · Watch-outs</h4>
+<ul><li><strong>Gaming risk:</strong> Severity downgrading (calling a Sev2 a Sev3). Audit classification quarterly against impact criteria.</li>
+<li><strong>Counterbalance with:</strong> S3 Deployment frequency</li>
+<li><strong>Common mistake:</strong> Claiming credit for incident reduction that came from unrelated infra work — causation, not correlation; tag root causes.</li></ul>
+</div></details>
+<details class="card" id="a5">
+<summary><span class="code">A5</span> Suggestion acceptance rate &nbsp; <span class="pill l1">Level 1 · start now</span> <span class="pill blue">Blue Money</span></summary>
+<div class="inner">
+<h4>1 · What it is</h4><p>% of AI code suggestions developers accept. <strong>Diagnostic only — the most misleading number in the
+GenAI conversation if used as 'productivity'.</strong> <br><strong>10-second example:</strong> Copilot dashboard
+shows Nova at 31% acceptance — perfectly normal; panic is warranted near 0% (broken adoption) or near 100%
+(blind trust).</p>
+<h4>2 · How to capture it <span class="meta">Example stack: Account level · Copilot metrics API/dashboard · Owner: Engineering Manager · Monthly · Effort: ~5 min</span></h4>
+<ol><li>Read monthly from the Copilot usage dashboard or metrics API. No setup.</li><li>Record per team, alongside churn (Q5) once available.</li><li>Do not set targets on it. Ever.</li></ol>
+<h4>3 · Baseline it</h4><p>First 3 months: Nova 31%, Atlas 24%, Phoenix 35%, Vega 28% — all in the healthy 20-40% band.</p>
+<h4>4 · Track improvements</h4>
+<table class="mini"><tr><th></th><th>M1</th><th>M3</th><th>M6</th><th>Read</th></tr><tr><td>Nova acceptance</td><td>31%</td><td>33%</td><td>34%</td><td>Stable — fine</td></tr><tr><td>Hypothetical team X</td><td>8%</td><td>7%</td><td>6%</td><td>Broken adoption → investigate</td></tr></table>
+<p>Use it like a smoke detector, not a speedometer. Team X's 7% means licences are wasted — run enablement.
+A team at 85% with rising churn means suggestions are being accepted uncritically — strengthen review. In both
+cases the number prompts a question; it never answers one.</p>
+<h4>5 · What it means in each execution model</h4>
+<table class="mini models"><tr><td><span class="pill tm">T&amp;M</span></td><td>Never show a client. Internal enablement signal only.</td></tr><tr><td><span class="pill ms">Managed Services</span></td><td>Same.</td></tr><tr><td><span class="pill fp">Fixed Price</span></td><td>Same.</td></tr><tr><td><span class="pill ob">Outcome-Based</span></td><td>Same.</td></tr></table><p class="note">If a client's procurement team asks for it, provide it with the explicit caveat that it is an adoption signal, not a value measure — and offer A3 instead.</p>
+<h4>6 · <span class="pill blue">Blue Money</span> — and the path to Green</h4>
+<p><strong>Classification:</strong> Blue — never converts.</p><p>None. Explicitly barred from ROI decks and business cases. Its only
+legitimate uses: spotting broken adoption and spotting blind trust. <strong>Trigger</strong> — <20% or >70%
+sustained for 2 months → enablement/review-practice check; <strong>Owner</strong> — Engineering Manager;
+<strong>Measure</strong> — the follow-up action, not the rate itself.</p>
+<div class="client-line">🗣 <strong>Say it to the client:</strong> Do not present. If pressed: “We track it operationally, but industry evidence shows it doesn't correlate with delivered value — here's what does.” (show S1/A3)</div>
+<h4>7 · Watch-outs</h4>
+<ul><li><strong>Gaming risk:</strong> Trivially gameable (accept-then-delete). This is WHY it's banned from value claims.</li>
+<li><strong>Counterbalance with:</strong> Q5 Code churn</li>
+<li><strong>Common mistake:</strong> Vendor decks lead with it because it always looks good. Don't import their slide into yours.</li></ul>
+</div></details>
+
+<h2>Level 2 — honest speed &amp; people signals <span class="pill l2">Months 2-3</span></h2>
+
+<details class="card" id="s1">
+<summary><span class="code">S1</span> Cycle time (first commit → production) &nbsp; <span class="pill l2">Level 2 · light automation</span> <span class="pill green">Green Money</span></summary>
+<div class="inner">
+<h4>1 · What it is</h4><p>Elapsed time from the first commit on a change until it runs in production. The single most honest speed
+signal — it includes coding, review, testing and deploy, which is where GenAI gains go to die.
+<br><strong>10-second example:</strong> first commit Tuesday 10:00, deployed Friday 16:00 → <code>4.25 days</code>.</p>
+<h4>2 · How to capture it <span class="meta">Example stack: Team Nova (T&M · GitHub + Actions) · Owner: Tech Lead + DevOps · Monthly · Effort: Med (30 min manual → automated)</span></h4>
+<ol><li>Start manual: sample 25 changes/month; for each, first-commit timestamp (PR commits tab) → prod deploy timestamp (Actions run). Median them.</li><li>Automate in month 2-3: a ~50-line script joining the PR API with the deployments API; or built-in analytics (ADO Lead/Cycle time widgets give this free).</li><li>Third-party (LinearB/Swarmia-class) only if the client approves the data access.</li></ol>
+<h4>3 · Baseline it</h4><p>Nova pre-GenAI: <strong>median 5.2 days</strong> (p75: 9 days — track p75 too; the median hides the painful tail).</p>
+<h4>4 · Track improvements</h4>
+<table class="mini"><tr><th></th><th>Baseline</th><th>Q1</th><th>Q2</th><th>Read</th></tr><tr><td>Median</td><td>5.2d</td><td>5.1d</td><td>4.1d</td><td>-21% by Q2 ✓</td></tr><tr><td>p75</td><td>9.0d</td><td>9.2d</td><td>6.8d</td><td>Tail shrinking ✓</td></tr><tr><td>Defect density (pair)</td><td>3.6</td><td>3.8</td><td>3.5</td><td>Held ✓</td></tr></table>
+<p>Q1 was flat despite Copilot — because review was the constraint (see S5). After fixing the review
+bottleneck, Q2 shows the genuine end-to-end gain. This sequencing — tool, then bottleneck, then gain — is the
+realistic story to tell leadership, and far more credible than instant miracles.</p>
+<h4>5 · What it means in each execution model</h4>
+<table class="mini models"><tr><td><span class="pill tm">T&amp;M</span></td><td>Freed hours are only Green if redeployed to billable work: Nova's 21% ≈ 1.5 verified hrs/dev/week ≈ 620 hrs/yr ≈ $31K billable capacity — IF the account manager books it. Unbooked, it leaks.</td></tr><tr><td><span class="pill ms">Managed Services</span></td><td>Faster change delivery = faster fix flow = better SLA posture at same headcount.</td></tr><tr><td><span class="pill fp">Fixed Price</span></td><td>21% faster on the critical path = earlier milestones or absorbed scope changes = protected margin.</td></tr><tr><td><span class="pill ob">Outcome-Based</span></td><td>Shorter cycle = faster path to each contracted milestone payment.</td></tr></table>
+<h4>6 · <span class="pill green">Green Money</span> — and the path to Green</h4>
+<p><strong>Classification:</strong> Green — anchor metric.</p><p>This is the anchor for every credible speed claim. Convert the
+measured delta (never the survey delta) into capacity: verified hrs/dev/week × devs × weeks × rate. Then make the
+leakage decision explicit — <strong>Redeploy</strong> (book freed hours to billable/backlog), <strong>Resize</strong>
+(absorb growth without hiring), or <strong>Reinvest</strong> (build the next offering). Unallocated savings evaporate
+into 'comfort'. <strong>Trigger</strong> — quarterly capacity-allocation decision on the measured delta;
+<strong>Owner</strong> — Delivery Manager; <strong>Measure</strong> — booked hours / avoided requisitions, with Finance.</p>
+<div class="client-line">🗣 <strong>Say it to the client:</strong> “Delivery is measurably 21% faster end-to-end — and here is exactly where those regained hours went: [feature X shipped early / scope Y absorbed at no change cost].”</div>
+<h4>7 · Watch-outs</h4>
+<ul><li><strong>Gaming risk:</strong> Cherry-picking easy changes into the sample — sample systematically (every Nth).</li>
+<li><strong>Counterbalance with:</strong> Q3 Defect density + Q1 CFR</li>
+<li><strong>Common mistake:</strong> Reporting mean instead of median (one 40-day outlier wrecks it); baselining after rollout began.</li></ul>
+</div></details>
+<details class="card" id="s2">
+<summary><span class="code">S2</span> Lead time for changes (DORA) &nbsp; <span class="pill l2">Level 2 · light automation</span> <span class="pill green">Green Money</span></summary>
+<div class="inner">
+<h4>1 · What it is</h4><p>Time from <em>code committed</em> to <em>code running in production</em> — the DORA-standard definition,
+nearly the same window as S1. Keep S1 as your working metric; report S2 when the client benchmarks against DORA.
+<br><strong>10-second example:</strong> commit merged Monday, live Wednesday → <code>2 days</code>.</p>
+<h4>2 · How to capture it <span class="meta">Example stack: Same sources as S1 · Owner: Tech Lead + DevOps · Monthly · Effort: Free once S1 exists</span></h4>
+<ol><li>Same data joins as S1 (commit/merge timestamp → deploy timestamp).</li><li>ADO Analytics 'Lead time' widget gives it natively; GitHub via the same script as S1.</li><li>Pick ONE of S1/S2 as your primary number internally to avoid double-reporting; keep the other for benchmarking.</li></ol>
+<h4>3 · Baseline it</h4><p>Nova: <strong>3.1 days</strong> (merge → prod portion is the bulk of it; DORA 2024 'elite' is < 1 day — directional only).</p>
+<h4>4 · Track improvements</h4>
+<table class="mini"><tr><th></th><th>Baseline</th><th>Q1</th><th>Q2</th><th>Read</th></tr><tr><td>Lead time</td><td>3.1d</td><td>2.9d</td><td>2.4d</td><td>-23% ✓</td></tr></table>
+<p>Moves with S1. Its main independent use: client and analyst conversations that speak DORA — "we moved
+from the industry median band toward the high band" lands well in QBRs.</p>
+<h4>5 · What it means in each execution model</h4>
+<table class="mini models"><tr><td><span class="pill tm">T&amp;M</span></td><td>Benchmark language for renewals ('high-performer band').</td></tr><tr><td><span class="pill ms">Managed Services</span></td><td>DORA benchmarking is common in MS governance decks.</td></tr><tr><td><span class="pill fp">Fixed Price</span></td><td>Internal only, usually.</td></tr><tr><td><span class="pill ob">Outcome-Based</span></td><td>Useful when contracts reference industry-standard delivery benchmarks.</td></tr></table>
+<h4>6 · <span class="pill green">Green Money</span> — and the path to Green</h4>
+<p><strong>Classification:</strong> Green — same conversion as S1.</p><p>Identical capacity conversion as S1 — never count it twice.
+<strong>Trigger/Owner/Measure</strong> — shared with S1.</p>
+<div class="client-line">🗣 <strong>Say it to the client:</strong> “Against the DORA industry benchmark, this team moved from median to the high-performing band in two quarters.”</div>
+<h4>7 · Watch-outs</h4>
+<ul><li><strong>Gaming risk:</strong> Same as S1.</li>
+<li><strong>Counterbalance with:</strong> Q1 CFR</li>
+<li><strong>Common mistake:</strong> Reporting S1 and S2 as two separate improvements — it's one improvement, measured two ways.</li></ul>
+</div></details>
+<details class="card" id="q2">
+<summary><span class="code">Q2</span> Rework rate &nbsp; <span class="pill l2">Level 2 · light automation</span> <span class="pill green">Green Money</span></summary>
+<div class="inner">
+<h4>1 · What it is</h4><p>% of deployments that are fixes to work previously declared done — reverts, hotfixes, patches. The earliest
+instability alarm: it degrades before CFR and incidents do. <br><strong>10-second example:</strong> of Phoenix's 20
+deployments in June, 3 were labeled <code>hotfix</code>/<code>revert</code> → <code>rework = 15%</code>.</p>
+<h4>2 · How to capture it <span class="meta">Example stack: Team Phoenix (Fixed Price · GitLab) · Owner: Tech Lead · Monthly · Effort: ~15 min after setup</span></h4>
+<ol><li>Team convention (10-min setup): every fix MR gets a label — <code>hotfix</code>, <code>revert</code>, or <code>patch</code>.</li><li>Monthly: labeled MRs deployed ÷ total deployments. Saved GitLab search per label.</li><li>Reconcile occasionally with git: <code>git log --grep='revert' --oneline --since='1 month ago'</code> catches unlabeled reverts.</li></ol>
+<h4>3 · Baseline it</h4><p>Phoenix pre-GenAI: <strong>6%</strong> of deployment effort was rework.</p>
+<h4>4 · Track improvements</h4>
+<table class="mini"><tr><th></th><th>Baseline</th><th>Q1</th><th>Q2</th><th>Read</th></tr><tr><td>Rework rate</td><td>6%</td><td>9%</td><td>5.5%</td><td>Ramp bump, then better</td></tr><tr><td>PR throughput (pair)</td><td>3.1</td><td>4.2</td><td>4.6</td><td>Volume up</td></tr></table>
+<p>The Q1 spike is AI code that "looked done" being merged faster than it was verified. Phoenix's fix: an
+AI-code checklist in review (edge cases, error handling, integration points) + mandatory tests for AI-heavy MRs.
+Q2 beat baseline. Rising rework alongside rising throughput is THE early paradox signature — catch it here, months
+before it reaches CFR or the client.</p>
+<h4>5 · What it means in each execution model</h4>
+<table class="mini models"><tr><td><span class="pill tm">T&amp;M</span></td><td>Rework hours are hours the client pays for twice — awkward conversations at renewal.</td></tr><tr><td><span class="pill ms">Managed Services</span></td><td>Leading indicator of the incident wave that triggers penalties next quarter.</td></tr><tr><td><span class="pill fp">Fixed Price</span></td><td>The purest margin drain: rework is unpaid work on a fixed budget.</td></tr><tr><td><span class="pill ob">Outcome-Based</span></td><td>Rework consumes the capacity needed to hit contracted milestones.</td></tr></table>
+<h4>6 · <span class="pill green">Green Money</span> — and the path to Green</h4>
+<p><strong>Classification:</strong> Green — outcome metric.</p><p>Convert via returned hours: (baseline − actual rework %) ×
+deployment effort × rate. Phoenix: 0.5pt improvement on ~1,600 deploy-effort hrs/qtr ≈ 8 hrs/qtr — small alone,
+but the real value is the avoided Q1-pattern: unchecked, 9% rework compounds into failed milestones.
+<strong>Trigger</strong> — rework > baseline for 2 months auto-strengthens the review gate;
+<strong>Owner</strong> — Tech Lead; <strong>Measure</strong> — rework % + hours, quarterly.</p>
+<div class="client-line">🗣 <strong>Say it to the client:</strong> “We detect quality debt weeks early via rework tracking — that's why our failure rate stayed flat while shipping speed rose.”</div>
+<h4>7 · Watch-outs</h4>
+<ul><li><strong>Gaming risk:</strong> Relabeling fixes as 'enhancements'. Periodic audit of change descriptions vs labels.</li>
+<li><strong>Counterbalance with:</strong> S4 PR throughput</li>
+<li><strong>Common mistake:</strong> Counting planned refactoring as rework — rework = unplanned fixes to 'done' work only.</li></ul>
+</div></details>
+<details class="card" id="q8">
+<summary><span class="code">Q8</span> Failed deployment recovery time &nbsp; <span class="pill l2">Level 2 · light automation</span> <span class="pill green">Green Money</span></summary>
+<div class="inner">
+<h4>1 · What it is</h4><p>When a deployment fails, how long until service is restored? (DORA's renamed MTTR.) Ship-fast must be
+paired with recover-fast. <br><strong>10-second example:</strong> bad release at 14:00, rollback completed and
+service verified at 15:30 → <code>1.5 hours</code>.</p>
+<h4>2 · How to capture it <span class="meta">Example stack: Team Atlas (Managed Services · ServiceNow) · Owner: DevOps / SRE · Monthly · Effort: ~15 min</span></h4>
+<ol><li>For each deployment-caused incident: opened_at → resolved_at from ServiceNow (already timestamped).</li><li>Filter: incidents whose 'caused by change' links a deployment.</li><li>Median per month. Also record the recovery method (rollback vs fix-forward).</li></ol>
+<h4>3 · Baseline it</h4><p>Atlas pre-GenAI: <strong>median 4.0 hours</strong> to recover a failed deployment.</p>
+<h4>4 · Track improvements</h4>
+<table class="mini"><tr><th></th><th>Baseline</th><th>Q1</th><th>Q2</th><th>Read</th></tr><tr><td>Recovery time</td><td>4.0h</td><td>4.5h</td><td>2.5h</td><td>-38% by Q2 ✓</td></tr></table>
+<p>Q2 improvement came from AI-assisted runbook lookup and one-click rollback automation — a legitimate
+GenAI win on the ops side that often outweighs the coding-side gains in Managed Services. The Q1 dip: unfamiliar
+AI-generated code took longer to diagnose — mitigated by requiring AI-assisted changes to note their generation
+context in the PR description.</p>
+<h4>5 · What it means in each execution model</h4>
+<table class="mini models"><tr><td><span class="pill tm">T&amp;M</span></td><td>Downtime hours are unbillable chaos hours.</td></tr><tr><td><span class="pill ms">Managed Services</span></td><td>Directly priced: uptime SLAs convert recovery minutes into penalty dollars or credits.</td></tr><tr><td><span class="pill fp">Fixed Price</span></td><td>Recovery time during warranty is free work.</td></tr><tr><td><span class="pill ob">Outcome-Based</span></td><td>Uptime is typically a contracted KPI — recovery time is its main lever.</td></tr></table>
+<h4>6 · <span class="pill green">Green Money</span> — and the path to Green</h4>
+<p><strong>Classification:</strong> Green — outcome metric.</p><p>Downtime avoided × cost per downtime-hour (from the client's own
+SLA credit schedule — the number is already contractual). <strong>Trigger</strong> — any recovery > 4h auto-spawns
+a runbook improvement task; <strong>Owner</strong> — SRE lead; <strong>Measure</strong> — median recovery + SLA
+credits paid (target: zero).</p>
+<div class="client-line">🗣 <strong>Say it to the client:</strong> “Recovery time fell 38% — at your SLA credit schedule that's ~$40K/yr in avoided credits, plus the outages your users never felt.”</div>
+<h4>7 · Watch-outs</h4>
+<ul><li><strong>Gaming risk:</strong> Closing incidents before full verification. Audit closure criteria.</li>
+<li><strong>Counterbalance with:</strong> S3 Deployment frequency</li>
+<li><strong>Common mistake:</strong> Mixing all-incident MTTR with deployment-caused recovery — this metric is deployment-caused only.</li></ul>
+</div></details>
+<details class="card" id="e1">
+<summary><span class="code">E1</span> DevEx index (survey) &nbsp; <span class="pill l2">Level 2 · light automation</span> <span class="pill blue">Blue Money</span></summary>
+<div class="inner">
+<h4>1 · What it is</h4><p>One number for how the work actually feels, from a 12-question quarterly survey across three research-backed
+dimensions: feedback loops, cognitive load, flow state. It exists because burnout reverses every other gain within
+quarters. <br><strong>10-second example:</strong> Atlas's Q2 survey: feedback 3.5, cognitive load 3.2, flow 2.9 →
+<code>index 3.2 / 5</code>.</p>
+<h4>2 · How to capture it <span class="meta">Example stack: All teams · MS Forms / Google Forms · Owner: Engineering Manager · Quarterly (never more often) · Effort: ~1h per quarter</span></h4>
+<ol><li>Copy the 12 items from the workbook's DevEx Survey sheet into an anonymous MS Form.</li><li>Send quarterly, per team, 1 week window + one reminder. Target >60% response.</li><li>Enter team means into the DevEx Survey sheet (it computes dimension and overall means).</li><li>ALWAYS publish results + the actions taken to the team — skip this once and next quarter's response rate halves.</li></ol>
+<h4>3 · Baseline it</h4><p>First survey at rollout: Atlas <strong>3.4 / 5</strong> (flow state weakest at 2.9 — interruptions and
+meeting fragmentation, a pre-existing problem GenAI didn't cause and can't fix).</p>
+<h4>4 · Track improvements</h4>
+<table class="mini"><tr><th></th><th>Baseline</th><th>Q1</th><th>Q2</th><th>Read</th></tr><tr><td>DevEx index</td><td>3.4</td><td>3.5</td><td>3.6</td><td>Gently up ✓</td></tr><tr><td>PR throughput (pair)</td><td>2.8</td><td>3.6</td><td>4.1</td><td>Up — safely</td></tr></table>
+<p>Output rose AND experience rose — the gains are sustainable. The danger pattern is the reverse: output
+up, DevEx down = the team is sprinting on borrowed energy; expect attrition and defect spikes within 2 quarters.
+That pattern triggers an immediate rebalance toward quality/flow work regardless of how good the speed numbers look.</p>
+<h4>5 · What it means in each execution model</h4>
+<table class="mini models"><tr><td><span class="pill tm">T&amp;M</span></td><td>Attrition on a T&M account = lost billable seats + ramp-up cost for replacements.</td></tr><tr><td><span class="pill ms">Managed Services</span></td><td>Continuity is the service: DevEx predicts the retention of the people who hold system knowledge.</td></tr><tr><td><span class="pill fp">Fixed Price</span></td><td>Burnout mid-project on a fixed deadline is a delivery-risk event, not an HR footnote.</td></tr><tr><td><span class="pill ob">Outcome-Based</span></td><td>Sustained KPI performance requires a sustainable team.</td></tr></table><p class="note">Staff Aug: run the survey per client account, anonymized — individual results must never be identifiable.</p>
+<h4>6 · <span class="pill blue">Blue Money</span> — and the path to Green</h4>
+<p><strong>Classification:</strong> Blue — guard metric.</p><p>Converts only via avoided attrition: one regrettable departure ≈
+50-150% of annual salary in replacement + ramp cost. Don't over-claim; use it as the guard that keeps Green claims
+honest. <strong>Trigger</strong> — index drops 0.3+ in a quarter → mandatory root-cause retro;
+<strong>Owner</strong> — Engineering Manager; <strong>Measure</strong> — index trend + regrettable attrition count.</p>
+<div class="client-line">🗣 <strong>Say it to the client:</strong> “Our delivery gains are sustainable — team health improved alongside output, so you're not renting a sprint that ends in resignations.”</div>
+<h4>7 · Watch-outs</h4>
+<ul><li><strong>Gaming risk:</strong> Survey theater (leading questions, cherry-picked quotes). Use the fixed 12 items verbatim, anonymous, every time.</li>
+<li><strong>Counterbalance with:</strong> S4 PR throughput</li>
+<li><strong>Common mistake:</strong> Surveying monthly (fatigue), or not publishing actions (trust collapse — then the data goes dark).</li></ul>
+</div></details>
+<details class="card" id="e3">
+<summary><span class="code">E3</span> Friction hours lost / week &nbsp; <span class="pill l2">Level 2 · light automation</span> <span class="pill blue">Blue Money</span></summary>
+<div class="inner">
+<h4>1 · What it is</h4><p>Self-reported hours lost weekly to organizational friction: slow builds, broken environments, approval
+waits, unclear requirements. Matters because AI often <em>masks</em> friction instead of removing it — devs use AI
+to endure a bad system rather than fixing the system. <br><strong>10-second example:</strong> Atlas devs report a
+median <code>8 hrs/week</code> lost — a full working day each.</p>
+<h4>2 · How to capture it <span class="meta">Example stack: All teams · one item in the DevEx survey · Owner: Engineering Manager · Quarterly · Effort: Free (rides the survey)</span></h4>
+<ol><li>Survey item: 'In a typical week, how many hours do you lose to friction outside your control (builds, environments, approvals, unclear requirements)?' + a free-text 'biggest one?'</li><li>Report team median + the top-3 named frictions.</li><li>The free-text answers are the action list — that's the real product of this metric.</li></ol>
+<h4>3 · Baseline it</h4><p>Atlas: <strong>median 8 hrs/week</strong>; top frictions: 25-min CI builds, test-env instability,
+2-day access-approval waits. (Industry context: Atlassian 2025 — 90% of devs lose 6+ hrs/week.)</p>
+<h4>4 · Track improvements</h4>
+<table class="mini"><tr><th></th><th>Baseline</th><th>Q1</th><th>Q2</th><th>Read</th></tr><tr><td>Friction hrs/week</td><td>8</td><td>7.5</td><td>5.5</td><td>CI fix landed in Q2</td></tr><tr><td>Cycle time (pair)</td><td>4.8d</td><td>4.6d</td><td>3.9d</td><td>Converted ✓</td></tr></table>
+<p>Q2's drop came from fixing the #1 named friction (build time 25→8 min via caching + parallelization —
+a $0 infra change). Note the pair: friction fell AND cycle time fell. Friction removal is often a bigger, cheaper
+lever than more AI licenses — this metric finds those levers.</p>
+<h4>5 · What it means in each execution model</h4>
+<table class="mini models"><tr><td><span class="pill tm">T&amp;M</span></td><td>Friction hours are billed hours producing nothing — eventually the client notices.</td></tr><tr><td><span class="pill ms">Managed Services</span></td><td>Friction inflates MTTR and change latency inside a fixed fee.</td></tr><tr><td><span class="pill fp">Fixed Price</span></td><td>Friction burn rate is invisible margin leak on a fixed budget.</td></tr><tr><td><span class="pill ob">Outcome-Based</span></td><td>Friction is capacity stolen from contracted outcomes.</td></tr></table>
+<h4>6 · <span class="pill blue">Blue Money</span> — and the path to Green</h4>
+<p><strong>Classification:</strong> Blue — converts via cycle time.</p><p>Fix the named friction → re-measure S1; the cycle-time
+delta is the Green claim (with causation: the fix is dated and specific). <strong>Trigger</strong> — each quarter,
+the #1 named friction gets a funded fix task; <strong>Owner</strong> — Engineering Manager;
+<strong>Measure</strong> — friction median + the before/after of each fixed item.</p>
+<div class="client-line">🗣 <strong>Say it to the client:</strong> “We removed a full workday of waste per developer per week — that improvement is permanent infrastructure, not a tool subscription.”</div>
+<h4>7 · Watch-outs</h4>
+<ul><li><strong>Gaming risk:</strong> None meaningful — it's self-reported pain.</li>
+<li><strong>Counterbalance with:</strong> E1 DevEx index</li>
+<li><strong>Common mistake:</strong> Collecting the number but never funding the fixes — then the survey itself becomes a friction.</li></ul>
+</div></details>
+<details class="card" id="a2">
+<summary><span class="code">A2</span> AI-assisted PR share &nbsp; <span class="pill l2">Level 2 · light automation</span> <span class="pill blue">Blue Money</span></summary>
+<div class="inner">
+<h4>1 · What it is</h4><p>% of merged PRs where GenAI meaningfully helped. Shows adoption <em>depth</em> (vs A1's breadth) — and its
+real job is enabling the Level-3 AI vs non-AI comparison. <br><strong>10-second example:</strong> 60 of Nova's 109
+June PRs ticked the AI-assisted box → <code>55%</code>.</p>
+<h4>2 · How to capture it <span class="meta">Example stack: Team Nova (T&M · GitHub) · Owner: Tech Lead · Monthly · Effort: ~10 min after setup</span></h4>
+<ol><li>Add one line to <code>.github/PULL_REQUEST_TEMPLATE.md</code>: <code>- [ ] AI-assisted (Copilot or similar meaningfully contributed)</code>.</li><li>10-minute setup; socialize the honest-ticking norm ('meaningfully' = beyond trivial autocomplete).</li><li>Monthly count: checked ÷ total merged. GitLab/ADO: same via MR template / PR description convention.</li></ol>
+<h4>3 · Baseline it</h4><p>Month 1 after template: <strong>20%</strong> (early adopters only).</p>
+<h4>4 · Track improvements</h4>
+<table class="mini"><tr><th></th><th>M1</th><th>M3</th><th>M6</th><th>Read</th></tr><tr><td>AI-assisted share</td><td>20%</td><td>45%</td><td>60%</td><td>Healthy adoption curve</td></tr><tr><td>Defect density (pair)</td><td>3.6</td><td>3.8</td><td>3.5</td><td>Quality held ✓</td></tr></table>
+<p>The curve shape matters: a plateau at 25% means adoption stalled (run enablement); an instant 95% means
+box-ticking theater (re-socialize the definition). 60% with stable quality = adoption is real and safe. From month
+4 onward, this tag powers A3 — the strongest evidence in the whole framework.</p>
+<h4>5 · What it means in each execution model</h4>
+<table class="mini models"><tr><td><span class="pill tm">T&amp;M</span></td><td>Internal signal; also answers the client's 'are you actually using the AI tooling we hear about?'</td></tr><tr><td><span class="pill ms">Managed Services</span></td><td>Adoption depth across run/maintain work.</td></tr><tr><td><span class="pill fp">Fixed Price</span></td><td>Shows whether the margin thesis (AI accelerates delivery) is actually being exercised.</td></tr><tr><td><span class="pill ob">Outcome-Based</span></td><td>Internal only.</td></tr></table>
+<h4>6 · <span class="pill blue">Blue Money</span> — and the path to Green</h4>
+<p><strong>Classification:</strong> Blue — enabler metric.</p><p>Not converted itself; it UNLOCKS A3, which is the causation
+evidence clients accept. <strong>Trigger</strong> — share plateaus < 40% by month 4 → enablement sprint;
+<strong>Owner</strong> — Tech Lead; <strong>Measure</strong> — share trend + A3 readiness.</p>
+<div class="client-line">🗣 <strong>Say it to the client:</strong> Not presented alone; feeds the A3 comparison slide.</div>
+<h4>7 · Watch-outs</h4>
+<ul><li><strong>Gaming risk:</strong> Box-ticking to look modern (or not ticking to avoid scrutiny). Keep it consequence-free: the tag is data, never appraisal input.</li>
+<li><strong>Counterbalance with:</strong> Q3 Defect density</li>
+<li><strong>Common mistake:</strong> Making the checkbox mandatory-feeling — coerced data is worse than none.</li></ul>
+</div></details>
+<details class="card" id="e2">
+<summary><span class="code">E2</span> Perception gap check &nbsp; <span class="pill l2">Level 2 · light automation</span> <span class="pill blue">Blue Money</span></summary>
+<div class="inner">
+<h4>1 · What it is</h4><p>The difference between how much faster developers <em>feel</em> and how much faster the system
+<em>measures</em>. METR's 2025 RCT found devs believed +20% while actually being −19% — a 39-point gap. This
+metric keeps that distortion out of your client numbers. <br><strong>10-second example:</strong> Nova's survey
+says 'we're ~25% faster'; the tracker says cycle time improved 8% → <code>gap = 17 points</code>.</p>
+<h4>2 · How to capture it <span class="meta">Example stack: All teams · survey + Baseline Tracker · Owner: Engineering Manager · Quarterly · Effort: Free (rides the survey)</span></h4>
+<ol><li>Survey item: 'How much faster/slower do GenAI tools make your end-to-end delivery? (−50%…+50%)'.</li><li>Take the team median → compare with the measured S1 delta from the Baseline Tracker (column J).</li><li>Gap = perceived − measured. Report both numbers side by side, always.</li></ol>
+<h4>3 · Baseline it</h4><p>First measurement: perceived +25%, measured +8% → <strong>gap 17 points</strong>.</p>
+<h4>4 · Track improvements</h4>
+<table class="mini"><tr><th></th><th>Q1</th><th>Q2</th><th>Q3</th><th>Read</th></tr><tr><td>Perceived</td><td>+25%</td><td>+22%</td><td>+18%</td><td>Calibrating down</td></tr><tr><td>Measured (S1)</td><td>+8%</td><td>+15%</td><td>+16%</td><td>Catching up</td></tr><tr><td>Gap</td><td>17</td><td>7</td><td>2</td><td>Converging ✓</td></tr></table>
+<p>Two healthy forces converge: measured gains grow as bottlenecks get fixed, and perception calibrates as
+the team sees real data. A persistent 20+ point gap means enthusiasm is outrunning reality — fine for morale,
+fatal for business cases. The rule it enforces: <strong>no self-reported number ever enters a client deck.</strong></p>
+<h4>5 · What it means in each execution model</h4>
+<table class="mini models"><tr><td><span class="pill tm">T&amp;M</span></td><td>Protects you from promising the client capacity that doesn't exist.</td></tr><tr><td><span class="pill ms">Managed Services</span></td><td>Prevents overcommitting SLA improvements based on team enthusiasm.</td></tr><tr><td><span class="pill fp">Fixed Price</span></td><td>Prevents bidding the NEXT fixed-price project on perceived (inflated) velocity — the most expensive mistake on this page.</td></tr><tr><td><span class="pill ob">Outcome-Based</span></td><td>Prevents signing outcome targets the real velocity can't hit.</td></tr></table>
+<h4>6 · <span class="pill blue">Blue Money</span> — and the path to Green</h4>
+<p><strong>Classification:</strong> Blue — credibility guard.</p><p>Never converts; it protects every other conversion.
+<strong>Trigger</strong> — gap > 20 points → self-reported figures banned from all business cases that quarter;
+<strong>Owner</strong> — Engineering Manager; <strong>Measure</strong> — the gap, trending toward < 10.</p>
+<div class="client-line">🗣 <strong>Say it to the client:</strong> Not shown directly — its value is what it prevents: “every number on this slide is system-measured, not survey-claimed.”</div>
+<h4>7 · Watch-outs</h4>
+<ul><li><strong>Gaming risk:</strong> None — it exists to catch gaming.</li>
+<li><strong>Counterbalance with:</strong> —</li>
+<li><strong>Common mistake:</strong> Skipping it because it feels academic. Every inflated GenAI ROI deck in the industry traces back to exactly this gap.</li></ul>
+</div></details>
+
+<h2>Level 3 — causation &amp; money <span class="pill l3">Months 4-6</span></h2>
+
+<details class="card" id="a3">
+<summary><span class="code">A3</span> AI vs non-AI PR comparison &nbsp; <span class="pill l3">Level 3 · advanced</span> <span class="pill green">Green Money</span></summary>
+<div class="inner">
+<h4>1 · What it is</h4><p>Do AI-assisted PRs move faster AND stay as safe as non-assisted ones — same team, same period, same kind of
+work? The closest thing to a controlled experiment production allows, and the single strongest evidence you can
+show a client. <br><strong>10-second example:</strong> Nova Q3 — AI-assisted PRs: median cycle 3.6d, 6% defect-linked;
+non-AI: 4.4d, 5.5% — <em>18% faster at comparable quality.</em></p>
+<h4>2 · How to capture it <span class="meta">Example stack: Team Nova (T&M · GitHub, needs A2 tag running ≥ 1 quarter) · Owner: Tech Lead + PMO · Quarterly · Effort: High (half-day with a script)</span></h4>
+<ol><li>Quarterly: export merged PRs with the A2 checkbox state, size (lines changed), cycle time, and any linked defect/incident.</li><li>Segment: AI-assisted vs not. Compare WITHIN size bands (S/M/L) to avoid 'AI gets the easy tickets' bias.</li><li>Compare: median cycle time, review turnaround, % defect-linked within 30 days.</li><li>Minimum ~50 PRs per group for a stable read; pool 2 quarters if needed.</li></ol>
+<h4>3 · Baseline it</h4><p>No pre-baseline needed — the non-AI group IS the control. Q3 first read (Nova, 210 PRs: 130 AI / 80 non-AI):
+<strong>cycle 3.6d vs 4.4d (−18%) · review 11h vs 13h · defect-linked 6.0% vs 5.5% (comparable)</strong>.</p>
+<h4>4 · Track improvements</h4>
+<table class="mini"><tr><th></th><th>Q3</th><th>Q4</th><th>Read</th></tr><tr><td>Cycle-time advantage</td><td>−18%</td><td>−22%</td><td>Widening ✓</td></tr><tr><td>Defect-link gap</td><td>+0.5pt</td><td>+0.2pt</td><td>Converging ✓</td></tr><tr><td>AI share (pair)</td><td>62%</td><td>68%</td><td>Denominator healthy</td></tr></table>
+<p>The two lines that matter: the speed advantage should hold or widen, and the quality gap should converge
+to ~zero. If AI-assisted PRs were 18% faster but 2× defect-linked, the honest conclusion is 'not yet' — and the
+framework says so out loud. Guard the size-band comparison: without it, this metric silently measures task
+assignment, not AI effect.</p>
+<h4>5 · What it means in each execution model</h4>
+<table class="mini models"><tr><td><span class="pill tm">T&amp;M</span></td><td>THE renewal slide: 'AI-assisted work ships 18% faster at equal quality' justifies rate cards and expansion.</td></tr><tr><td><span class="pill ms">Managed Services</span></td><td>Proves AI-driven efficiency inside the fixed fee — the margin story with evidence.</td></tr><tr><td><span class="pill fp">Fixed Price</span></td><td>Validates (or refutes) the velocity assumption before it gets baked into the next bid.</td></tr><tr><td><span class="pill ob">Outcome-Based</span></td><td>Direct evidence AI capability contributes to contracted outcomes.</td></tr></table>
+<h4>6 · <span class="pill green">Green Money</span> — and the path to Green</h4>
+<p><strong>Classification:</strong> Green — the causation proof.</p><p>This metric IS the causation layer other conversions cite.
+18% faster on 62% of work ≈ 11% blended capacity → priced via the S1 conversion, now with an evidence trail Finance
+and client procurement accept. <strong>Trigger</strong> — quality gap > 1.5pt for 2 quarters → tighten AI-code
+review before scaling further; <strong>Owner</strong> — PMO; <strong>Measure</strong> — the quarterly comparison
+table itself, archived as evidence.</p>
+<div class="client-line">🗣 <strong>Say it to the client:</strong> “Same team, same quarter, same work mix: AI-assisted changes shipped 18% faster with no quality difference. That's the measured effect of the tooling — not a vendor claim.”</div>
+<h4>7 · Watch-outs</h4>
+<ul><li><strong>Gaming risk:</strong> Cherry-picking easy tasks for AI (breaks the comparison) — hence size-banding; honest A2 tagging is the foundation.</li>
+<li><strong>Counterbalance with:</strong> Q1 CFR</li>
+<li><strong>Common mistake:</strong> Running it with 20 PRs and declaring victory — insist on ~50+ per group.</li></ul>
+</div></details>
+<details class="card" id="q5">
+<summary><span class="code">Q5</span> Code churn (early rewrite %) &nbsp; <span class="pill l3">Level 3 · advanced</span> <span class="pill blue">Blue Money</span></summary>
+<div class="inner">
+<h4>1 · What it is</h4><p>% of new lines rewritten or deleted within 30 days of merging — code that 'looked done' but wasn't. The
+classic AI-code durability smell (GitClear 2025: churn rising industry-wide with AI assistants).
+<br><strong>10-second example:</strong> of 10,000 lines Phoenix merged in June, 1,200 were changed again within
+30 days → <code>churn 12%</code>.</p>
+<h4>2 · How to capture it <span class="meta">Example stack: Team Phoenix (Fixed Price · GitLab + SonarQube) · Owner: Tech Lead · Quarterly · Effort: Med-High (script) / Low (if tooling exists)</span></h4>
+<ol><li>Easiest: SonarQube 'new code' metrics per sprint window, or a git script: for lines added in month M, how many were modified/deleted in M+1 (git log -L / diff analysis).</li><li>Commercial options (GitClear-class) only with client data approval.</li><li>Report quarterly alongside A2 share — churn on AI-heavy vs light repos is itself informative.</li></ol>
+<h4>3 · Baseline it</h4><p>Phoenix pre-GenAI: <strong>9%</strong> 30-day churn.</p>
+<h4>4 · Track improvements</h4>
+<table class="mini"><tr><th></th><th>Baseline</th><th>Q1</th><th>Q2</th><th>Read</th></tr><tr><td>30-day churn</td><td>9%</td><td>12%</td><td>10%</td><td>Ramp bump, settling</td></tr><tr><td>Rework rate (pair)</td><td>6%</td><td>9%</td><td>5.5%</td><td>Same shape</td></tr></table>
+<p>Churn and rework move together — churn is the code-level view, rework the deployment-level view of the
+same disease: AI output merged faster than it's verified. Persistent churn > 12-15% means today's velocity is
+being borrowed from next quarter's maintenance budget.</p>
+<h4>5 · What it means in each execution model</h4>
+<table class="mini models"><tr><td><span class="pill tm">T&amp;M</span></td><td>Churned code = hours billed twice for the same functionality.</td></tr><tr><td><span class="pill ms">Managed Services</span></td><td>Predicts the maintenance load your fixed fee must absorb next year.</td></tr><tr><td><span class="pill fp">Fixed Price</span></td><td>Deferred margin erosion — the code ships on time, then eats the warranty period.</td></tr><tr><td><span class="pill ob">Outcome-Based</span></td><td>Churn consumes capacity contracted for outcomes.</td></tr></table>
+<h4>6 · <span class="pill blue">Blue Money</span> — and the path to Green</h4>
+<p><strong>Classification:</strong> Blue — diagnostic.</p><p>Indirect only: churn ↓ → rework ↓ → hours returned (priced in Q2's
+conversion). Don't build a standalone dollar claim on churn — use it as the durability evidence behind the speed
+claims. <strong>Trigger</strong> — churn > 12% for 2 quarters → AI-code review standards tightened;
+<strong>Owner</strong> — Tech Lead; <strong>Measure</strong> — churn trend vs baseline.</p>
+<div class="client-line">🗣 <strong>Say it to the client:</strong> “We monitor whether AI-generated code survives contact with reality — ours does: churn is back at pre-AI levels while output is up.”</div>
+<h4>7 · Watch-outs</h4>
+<ul><li><strong>Gaming risk:</strong> Excluding volatile files from analysis. Fix the config once, version it.</li>
+<li><strong>Counterbalance with:</strong> S4 PR throughput</li>
+<li><strong>Common mistake:</strong> Confusing churn with healthy refactoring — churn counts only NEW code rewritten within 30 days.</li></ul>
+</div></details>
+<details class="card" id="q6">
+<summary><span class="code">Q6</span> Code duplication % &nbsp; <span class="pill l3">Level 3 · advanced</span> <span class="pill blue">Blue Money</span></summary>
+<div class="inner">
+<h4>1 · What it is</h4><p>% of duplicated blocks in changed code. AI assistants make copy-paste effortless — GitClear measured
+duplicated blocks rising 8× in 2024. Duplication is future maintenance debt: every clone must be found and fixed
+separately when the logic changes. <br><strong>10-second example:</strong> SonarQube reports 6.2% duplication on
+Phoenix's new code this quarter vs 4.5% before Copilot.</p>
+<h4>2 · How to capture it <span class="meta">Example stack: Team Phoenix (Fixed Price · SonarQube in Jenkins) · Owner: Tech Lead · Quarterly · Effort: Low (if Sonar exists)</span></h4>
+<ol><li>SonarQube already computes it: Measures → Duplications → filter to 'On New Code'. Zero extra setup where Sonar runs in CI.</li><li>Record quarterly per repo; watch the new-code number, not the whole-codebase number.</li><li>Optional: add a quality-gate condition — new-code duplication < 5% blocks the merge.</li></ol>
+<h4>3 · Baseline it</h4><p>Phoenix pre-GenAI: <strong>4.5%</strong> new-code duplication.</p>
+<h4>4 · Track improvements</h4>
+<table class="mini"><tr><th></th><th>Baseline</th><th>Q1</th><th>Q2 (gate on)</th><th>Read</th></tr><tr><td>New-code duplication</td><td>4.5%</td><td>6.2%</td><td>4.8%</td><td>Gate works</td></tr></table>
+<p>Q1 confirmed the industry pattern — Copilot happily suggests near-clones of existing code. The fix was
+mechanical: a 5% quality gate plus 'search before you paste' in the AI-code checklist. This is the cheapest
+quality guardrail in the whole framework: one Sonar setting.</p>
+<h4>5 · What it means in each execution model</h4>
+<table class="mini models"><tr><td><span class="pill tm">T&amp;M</span></td><td>Duplicated logic = multiplied future change-hours billed to an increasingly suspicious client.</td></tr><tr><td><span class="pill ms">Managed Services</span></td><td>Directly inflates run/maintain effort inside the fixed fee.</td></tr><tr><td><span class="pill fp">Fixed Price</span></td><td>Post-delivery duplication is a warranty and reputation cost.</td></tr><tr><td><span class="pill ob">Outcome-Based</span></td><td>Slows every future change the outcomes depend on.</td></tr></table>
+<h4>6 · <span class="pill blue">Blue Money</span> — and the path to Green</h4>
+<p><strong>Classification:</strong> Blue — diagnostic.</p><p>Convert only with a Finance-agreed maintenance-cost model (avoided
+duplicate-maintenance hours); otherwise keep it as the debt guard behind the speed story. <strong>Trigger</strong> —
+the Sonar quality gate itself (auto-blocks > 5%); <strong>Owner</strong> — Tech Lead; <strong>Measure</strong> —
+new-code duplication trend.</p>
+<div class="client-line">🗣 <strong>Say it to the client:</strong> “Our pipelines automatically block AI-generated copy-paste — the codebase you get is one you can afford to maintain.”</div>
+<h4>7 · Watch-outs</h4>
+<ul><li><strong>Gaming risk:</strong> Excluding files/relaxing the gate under deadline pressure. Version-control the quality profile; changes need review.</li>
+<li><strong>Counterbalance with:</strong> Q7 Tech debt ratio</li>
+<li><strong>Common mistake:</strong> Measuring whole-codebase duplication (legacy noise drowns the signal) — new code only.</li></ul>
+</div></details>
+<details class="card" id="q7">
+<summary><span class="code">Q7</span> Technical debt ratio &nbsp; <span class="pill l3">Level 3 · advanced</span> <span class="pill blue">Blue Money</span></summary>
+<div class="inner">
+<h4>1 · What it is</h4><p>Estimated cost to fix code issues ÷ cost to build the code (SonarQube's SQALE method). Under ~5% is a
+common healthy benchmark. The long-horizon check that GenAI volume isn't silently mortgaging the codebase.
+<br><strong>10-second example:</strong> Sonar: 340 hrs remediation on ~8,000 hrs of development → <code>4.3%</code> — healthy.</p>
+<h4>2 · How to capture it <span class="meta">Example stack: Team Phoenix (Fixed Price · SonarQube) · Owner: Tech Lead · Quarterly · Effort: Low</span></h4>
+<ol><li>Read quarterly from Sonar: Measures → Maintainability → Technical Debt Ratio (project level).</li><li>Track the trend per repo; investigate any step-change after high-AI-volume quarters.</li><li>Pair with the maintainability rating (A-E) for an executive-friendly letter grade.</li></ol>
+<h4>3 · Baseline it</h4><p>Phoenix pre-GenAI: <strong>4.2%</strong>, rating A.</p>
+<h4>4 · Track improvements</h4>
+<table class="mini"><tr><th></th><th>Baseline</th><th>Q2</th><th>Q4</th><th>Read</th></tr><tr><td>Debt ratio</td><td>4.2%</td><td>4.6%</td><td>4.4%</td><td>Stable, watch ✓</td></tr></table>
+<p>Slow drift up during the AI ramp, contained by the duplication gate and review checklist. The number to
+fear is a jump past 6-7% in two quarters of heavy AI generation — that's tomorrow's velocity already spent. Debt
+ratio moves slowly; it's the quarterly sanity check, not a monthly dial.</p>
+<h4>5 · What it means in each execution model</h4>
+<table class="mini models"><tr><td><span class="pill tm">T&amp;M</span></td><td>Debt-laden code inflates every future estimate — clients eventually benchmark you against cleaner shops.</td></tr><tr><td><span class="pill ms">Managed Services</span></td><td>You will maintain this debt inside your own fixed fee. Self-interest is aligned with the client's here.</td></tr><tr><td><span class="pill fp">Fixed Price</span></td><td>Handover quality: debt discovered post-delivery becomes disputes and warranty work.</td></tr><tr><td><span class="pill ob">Outcome-Based</span></td><td>Debt is friction on every future contracted outcome.</td></tr></table>
+<h4>6 · <span class="pill blue">Blue Money</span> — and the path to Green</h4>
+<p><strong>Classification:</strong> Blue — diagnostic.</p><p>Rarely converted directly (SQALE hours × rate is possible but soft).
+Its real job: proving the speed gains are not debt-financed. <strong>Trigger</strong> — ratio > 5% or rating drops
+a letter → debt-reduction items enter the next sprint; <strong>Owner</strong> — Tech Lead;
+<strong>Measure</strong> — ratio + rating, quarterly.</p>
+<div class="client-line">🗣 <strong>Say it to the client:</strong> “Independent static analysis rates the codebase 'A' throughout the AI rollout — the speed you're seeing isn't borrowed from maintainability.”</div>
+<h4>7 · Watch-outs</h4>
+<ul><li><strong>Gaming risk:</strong> Suppressing Sonar rules to flatter the number. Version-control quality profiles.</li>
+<li><strong>Counterbalance with:</strong> S1 Cycle time</li>
+<li><strong>Common mistake:</strong> Panicking over the absolute number on a legacy repo — the TREND during AI adoption is the signal.</li></ul>
+</div></details>
+<details class="card" id="a4">
+<summary><span class="code">A4</span> Cost per merged PR &nbsp; <span class="pill l3">Level 3 · advanced</span> <span class="pill green">Green Money</span></summary>
+<div class="inner">
+<h4>1 · What it is</h4><p>Fully-loaded GenAI tool cost ÷ merged PRs — unit economics a CFO parses in five seconds. Falls only if real
+throughput rises against the spend. <br><strong>10-second example:</strong> account Copilot spend $11.4K/quarter ÷
+620 merged PRs → <code>$18.40 per PR</code>.</p>
+<h4>2 · How to capture it <span class="meta">Example stack: Account level · Finance + Git platforms · Owner: Engineering Manager + Finance · Quarterly · Effort: Low</span></h4>
+<ol><li>Quarterly: total GenAI spend (licenses + enablement amortized) from Finance.</li><li>Total merged PRs across teams (the S4 counts, summed).</li><li>Divide. Track the trend; the absolute number matters less than its direction.</li><li>Optionally compute per team where license allocation is clean.</li></ol>
+<h4>3 · Baseline it</h4><p>First full quarter: <strong>$18.40 per merged PR</strong> ($11.4K ÷ 620).</p>
+<h4>4 · Track improvements</h4>
+<table class="mini"><tr><th></th><th>Q1</th><th>Q2</th><th>Q3</th><th>Read</th></tr><tr><td>Cost per merged PR</td><td>$18.40</td><td>$15.10</td><td>$13.20</td><td>Falling ✓</td></tr><tr><td>Rework rate (pair)</td><td>7%</td><td>6%</td><td>5.5%</td><td>Quality holds ✓</td></tr></table>
+<p>Falling 28% over two quarters because throughput rose (and idle seats were cut — A1) while spend was
+flat. The pair matters: if rework were climbing, cheap PRs would just mean cheap defects. This is also your license
+scaling gate: expansion is justified when the marginal seat keeps the unit cost falling.</p>
+<h4>5 · What it means in each execution model</h4>
+<table class="mini models"><tr><td><span class="pill tm">T&amp;M</span></td><td>Internal margin math on tool spend vs billable output.</td></tr><tr><td><span class="pill ms">Managed Services</span></td><td>Unit cost of change inside the fixed fee — the margin lever, quantified.</td></tr><tr><td><span class="pill fp">Fixed Price</span></td><td>Priced into the bid: falling unit cost = more competitive bids at same margin.</td></tr><tr><td><span class="pill ob">Outcome-Based</span></td><td>Cost per unit of progress toward outcomes.</td></tr></table>
+<h4>6 · <span class="pill green">Green Money</span> — and the path to Green</h4>
+<p><strong>Classification:</strong> Green — unit economics.</p><p>Already in dollars. The claim writes itself: 'tool cost per unit
+of delivered change fell 28% in six months.' <strong>Trigger</strong> — unit cost rising for 2 quarters → license
+count and adoption reviewed before renewal; <strong>Owner</strong> — Engineering Manager;
+<strong>Measure</strong> — the ratio, co-signed by Finance quarterly.</p>
+<div class="client-line">🗣 <strong>Say it to the client:</strong> “Our AI tooling pays for itself in unit terms: cost per delivered change is down 28% and still falling — that efficiency is priced into your engagement.”</div>
+<h4>7 · Watch-outs</h4>
+<ul><li><strong>Gaming risk:</strong> PR splitting deflates it artificially — pair with rework rate and PR-size stats.</li>
+<li><strong>Counterbalance with:</strong> Q2 Rework rate</li>
+<li><strong>Common mistake:</strong> Comparing the absolute number across teams with different PR cultures; trend within a team only.</li></ul>
+</div></details>
+<details class="card" id="s6">
+<summary><span class="code">S6</span> Feature lead time (idea → production) &nbsp; <span class="pill l3">Level 3 · advanced</span> <span class="pill green">Green Money</span></summary>
+<div class="inner">
+<h4>1 · What it is</h4><p>The full journey: work item accepted → live in production. This is the elapsed time the CLIENT actually
+experiences — and the end-to-end effectiveness number the code-speed view completely misses.
+<br><strong>10-second example:</strong> Vega feature accepted 1 March, deployed 4 April → <code>34 days</code>,
+of which coding was only 6.</p>
+<h4>2 · How to capture it <span class="meta">Example stack: Team Vega (Outcome-Based · Azure DevOps) · Owner: PMO / Delivery Manager · Quarterly · Effort: Med (linking discipline is the work)</span></h4>
+<ol><li>Prerequisite discipline: every PR links its work item (ADO enforces this via branch policy — turn it on).</li><li>Quarterly: for completed Features, timestamp Accepted/Committed state → linked deployment.</li><li>ADO Analytics lead-time widgets do this natively once linking is clean; Jira via issue created→Done + release link.</li><li>Report median + p75; segment by feature size if the mix varies.</li></ol>
+<h4>3 · Baseline it</h4><p>Vega pre-GenAI: <strong>median 34 days</strong> idea→prod. Time breakdown: 40% waiting/refinement,
+25% coding, 20% review+test, 15% release windows — coding was already the minority.</p>
+<h4>4 · Track improvements</h4>
+<table class="mini"><tr><th></th><th>Baseline</th><th>Q2</th><th>Q4</th><th>Read</th></tr><tr><td>Median idea→prod</td><td>34d</td><td>31d</td><td>26d</td><td>-24% ✓</td></tr><tr><td>Coding portion</td><td>8.5d</td><td>6.4d</td><td>5.9d</td><td>AI effect</td></tr><tr><td>Waiting portion</td><td>13.6d</td><td>12.9d</td><td>9.1d</td><td>Process effect</td></tr></table>
+<p>The decomposition is the insight: GenAI compressed the coding slice, but the bigger Q4 win came from
+attacking the waiting slice (smaller batches, faster refinement) once the data exposed it. Teams that only buy AI
+tools optimize 25% of this timeline; this metric forces the other 75% into view.</p>
+<h4>5 · What it means in each execution model</h4>
+<table class="mini models"><tr><td><span class="pill tm">T&amp;M</span></td><td>Faster idea→prod = more delivered scope per engagement = the expansion conversation.</td></tr><tr><td><span class="pill ms">Managed Services</span></td><td>Change-request turnaround inside the service — often a contractual expectation.</td></tr><tr><td><span class="pill fp">Fixed Price</span></td><td>Directly determines schedule risk and milestone dates.</td></tr><tr><td><span class="pill ob">Outcome-Based</span></td><td>THE metric: contracted milestones ARE features reaching production; 8 days earlier can literally mean earlier payment.</td></tr></table>
+<h4>6 · <span class="pill green">Green Money</span> — and the path to Green</h4>
+<p><strong>Classification:</strong> Green — the client's clock.</p><p>Time-to-market in the client's own units. For Vega: milestone
+delivered 3 weeks early → contract bonus clause triggered. For product clients: weeks-earlier × value-per-week of
+the feature (client's own business case supplies the number). <strong>Trigger</strong> — waiting-portion > 40% →
+process (not tooling) intervention; <strong>Owner</strong> — Delivery Manager; <strong>Measure</strong> — median +
+decomposition, quarterly.</p>
+<div class="client-line">🗣 <strong>Say it to the client:</strong> “Your features now reach production 24% sooner. Here's the breakdown — and note that we improved the process around the AI, which is why the gain is end-to-end, not just an IDE statistic.”</div>
+<h4>7 · Watch-outs</h4>
+<ul><li><strong>Gaming risk:</strong> Redefining 'accepted' to start the clock later. Fix state definitions in Phase 0 and audit.</li>
+<li><strong>Counterbalance with:</strong> I1 % new capabilities</li>
+<li><strong>Common mistake:</strong> Averaging epics with one-line changes — segment by size or use medians per class.</li></ul>
+</div></details>
+<details class="card" id="i1">
+<summary><span class="code">I1</span> % time on new capabilities &nbsp; <span class="pill l3">Level 3 · advanced</span> <span class="pill green">Green Money</span></summary>
+<div class="inner">
+<h4>1 · What it is</h4><p>Of everything engineering does, what share creates NEW value (features) vs keeping the lights on (defects,
+debt, risk, toil)? GenAI should shift this mix — if it doesn't, the gains are being eaten invisibly.
+<br><strong>10-second example:</strong> of Vega's 120 completed items last quarter, 68 were features →
+<code>57% on new capabilities</code>.</p>
+<h4>2 · How to capture it <span class="meta">Example stack: Team Vega (Outcome-Based · Azure DevOps) · Owner: PMO · Quarterly · Effort: Med (classification hygiene)</span></h4>
+<ol><li>Classify every work item into the four flow types: Feature / Defect / Debt / Risk (ADO work-item types + one custom field covers it; Jira via issue types + labels).</li><li>Quarterly: completed items (or story points) per type → feature share.</li><li>10-minute team training on classification; audit a sample monthly for drift.</li></ol>
+<h4>3 · Baseline it</h4><p>Vega pre-GenAI: <strong>52%</strong> features / 27% defects / 13% debt / 8% risk-compliance.</p>
+<h4>4 · Track improvements</h4>
+<table class="mini"><tr><th></th><th>Baseline</th><th>Q2</th><th>Q4</th><th>Read</th></tr><tr><td>Feature share</td><td>52%</td><td>55%</td><td>58%</td><td>+6 pts ✓</td></tr><tr><td>Defect share</td><td>27%</td><td>25%</td><td>21%</td><td>Falling ✓</td></tr></table>
+<p>+6 points of a 6-person team ≈ 0.36 FTE of capacity moved from fixing to building — roughly $54K/yr of
+capacity at cost, redirected. The failure mode reads the opposite way: feature share FALLING during a GenAI rollout
+means AI-generated volume is creating downstream defect work faster than it creates features (the paradox, seen
+from the portfolio level).</p>
+<h4>5 · What it means in each execution model</h4>
+<table class="mini models"><tr><td><span class="pill tm">T&amp;M</span></td><td>More feature share = more of the client's spend visibly building their product — renewal gold.</td></tr><tr><td><span class="pill ms">Managed Services</span></td><td>Shrinking defect/toil share at fixed fee = margin expansion, quantified.</td></tr><tr><td><span class="pill fp">Fixed Price</span></td><td>Feature share is where the bid's scope actually gets delivered.</td></tr><tr><td><span class="pill ob">Outcome-Based</span></td><td>Capacity on outcomes vs overhead — often reported in QBRs.</td></tr></table>
+<h4>6 · <span class="pill green">Green Money</span> — and the path to Green</h4>
+<p><strong>Classification:</strong> Green — capacity mix.</p><p>Points shifted × team cost = capacity redirected to value creation —
+a Finance-friendly framing because it's the same money doing more valuable work. <strong>Trigger</strong> — feature
+share drops 3+ pts → root-cause into defect/debt inflow; <strong>Owner</strong> — PMO;
+<strong>Measure</strong> — the four-way mix, quarterly, co-read with Finance.</p>
+<div class="client-line">🗣 <strong>Say it to the client:</strong> “Six points more of your spend now builds new capability instead of fixing old problems — that's ~$54K/yr of capacity redirected to your roadmap, at zero additional cost.”</div>
+<h4>7 · Watch-outs</h4>
+<ul><li><strong>Gaming risk:</strong> Misclassifying fixes as features. Monthly sample audit; classification owned by PMO, not sprint-pressured devs.</li>
+<li><strong>Counterbalance with:</strong> Q7 Tech debt ratio (don't starve debt work to inflate feature share!)</li>
+<li><strong>Common mistake:</strong> Chasing 100% features — healthy teams deliberately spend 15-25% on debt/risk; the goal is a deliberate mix, not a maximal one.</li></ul>
+</div></details>
+<details class="card" id="i4">
+<summary><span class="code">I4</span> Hard savings realized (Green Money ledger) &nbsp; <span class="pill l3">Level 3 · advanced</span> <span class="pill green">Green Money</span></summary>
+<div class="inner">
+<h4>1 · What it is</h4><p>The Finance-recognized cash events GenAI actually caused: decommissioned tools, avoided requisitions,
+reduced incident cost, SLA value. Not a calculation — a LEDGER of evidenced events. This is the sheet the CFO
+reads first. <br><strong>10-second example:</strong> "Test-data tool decommissioned 30 Jun, contract #4711,
+$30K/yr — replaced by AI-generated test data. Evidence: cancellation notice. Finance sign-off: 12 Jul." </p>
+<h4>2 · How to capture it <span class="meta">Example stack: Account level · Finance + Delivery Managers · Owner: Delivery Manager + Finance · Quarterly · Effort: Med (the discipline, not the math)</span></h4>
+<ol><li>Maintain the ledger in the ROI Blue-to-Green sheet: date, event, $ amount, evidence link, causation note, Finance sign-off.</li><li>Qualifying events ONLY: cancelled contract/license · closed or avoided requisition (req number) · measured incident-cost reduction (I2 × agreed rate) · SLA bonus/penalty delta.</li><li>Each entry needs Finance sign-off BEFORE it appears in any client or leadership material.</li><li>Everything else (hours saved, capacity freed) stays in the discounted-soft-savings section — never in this ledger.</li></ol>
+<h4>3 · Baseline it</h4><p>Ledger starts at $0 on rollout day. Year-1 example entries: test-tool decommission $30K · one
+contractor requisition closed, AI absorbed the workload $120K · incident reduction (I2, Finance-agreed model)
+$48K · SLA penalties avoided $25K → <strong>$223K evidenced Green Money</strong> vs $70.6K program cost.</p>
+<h4>4 · Track improvements</h4>
+<table class="mini"><tr><th></th><th>Q1</th><th>Q2</th><th>Q3</th><th>Q4</th></tr><tr><td>Ledger total (cum.)</td><td>$0</td><td>$30K</td><td>$150K</td><td>$223K</td></tr><tr><td>Program cost (cum.)</td><td>$18K</td><td>$35K</td><td>$53K</td><td>$71K</td></tr></table>
+<p>Q1 at $0 is CORRECT and should be presented as such — hard events take quarters to mature, and a
+credible $0 beats a fabricated number. The crossover quarter (Q2-Q3 here) is the moment the program is
+self-evidently paying for itself in CFO terms. The ratio of ledger to claimed-soft-savings is your credibility
+ratio — keep it above ~30% by year end or re-scope the story.</p>
+<h4>5 · What it means in each execution model</h4>
+<table class="mini models"><tr><td><span class="pill tm">T&amp;M</span></td><td>Requisitions avoided while revenue held = margin; freed capacity booked to new billable work = the ledger's revenue side.</td></tr><tr><td><span class="pill ms">Managed Services</span></td><td>Penalties avoided + clients absorbed without headcount — both auditable.</td></tr><tr><td><span class="pill fp">Fixed Price</span></td><td>Delivered under budgeted hours → margin delta on the project P&L (track it or it silently disappears into 'came in fine').</td></tr><tr><td><span class="pill ob">Outcome-Based</span></td><td>Bonus clauses triggered + penalty clauses avoided — literally contractual cash.</td></tr></table>
+<h4>6 · <span class="pill green">Green Money</span> — and the path to Green</h4>
+<p><strong>Classification:</strong> Green — the destination.</p><p>This IS Green Money; nothing to convert. The discipline:
+<strong>Trigger</strong> — every Blue metric improvement prompts the question 'what cash event can this now
+cause?' logged as a candidate; <strong>Owner</strong> — named Delivery Manager per candidate (not 'the team');
+<strong>Measure</strong> — the signed ledger, quarterly, with a 6-month verification date on every claim.</p>
+<div class="client-line">🗣 <strong>Say it to the client:</strong> “Beyond the delivery improvements, here are the audited cash events: $223K in year one against a $71K program cost — every line has an invoice, a requisition number, or your own SLA schedule behind it.”</div>
+<h4>7 · Watch-outs</h4>
+<ul><li><strong>Gaming risk:</strong> Claiming savings that would have happened anyway. Causation note is mandatory per entry; Finance is the gatekeeper.</li>
+<li><strong>Counterbalance with:</strong> E1 DevEx (savings extracted by burnout reverse themselves)</li>
+<li><strong>Common mistake:</strong> Presenting the projected version of this ledger. It is a record of what HAPPENED — projections live in the ROI calculator, clearly labeled.</li></ul>
+</div></details>
+
+<h2>Which metrics matter most in which execution model</h2>
+<p>●●● = primary money/value metric for that model · ●● = important · ● = internal diagnostic only.</p>
+<table>
+<tr><th>Metric</th><th style="text-align:center">T&amp;M</th><th style="text-align:center">Managed Services</th><th style="text-align:center">Fixed Price</th><th style="text-align:center">Outcome-Based</th></tr>
+<tr><td><a href="#s3">S3 Deployment frequency</a></td><td style="text-align:center">●●</td><td style="text-align:center">●●●</td><td style="text-align:center">●●</td><td style="text-align:center">●●</td></tr><tr><td><a href="#q1">Q1 Change failure rate (CFR)</a></td><td style="text-align:center">●●</td><td style="text-align:center">●●●</td><td style="text-align:center">●●●</td><td style="text-align:center">●●●</td></tr><tr><td><a href="#q3">Q3 Defect density</a></td><td style="text-align:center">●●</td><td style="text-align:center">●●●</td><td style="text-align:center">●●●</td><td style="text-align:center">●●●</td></tr><tr><td><a href="#s4">S4 PR throughput (team)</a></td><td style="text-align:center">●</td><td style="text-align:center">●</td><td style="text-align:center">●</td><td style="text-align:center">●</td></tr><tr><td><a href="#s5">S5 Review turnaround time</a></td><td style="text-align:center">●●</td><td style="text-align:center">●●</td><td style="text-align:center">●●●</td><td style="text-align:center">●●</td></tr><tr><td><a href="#a1">A1 License utilization</a></td><td style="text-align:center">●●</td><td style="text-align:center">●●</td><td style="text-align:center">●●</td><td style="text-align:center">●●</td></tr><tr><td><a href="#i2">I2 Sev1/Sev2 incidents</a></td><td style="text-align:center">●●</td><td style="text-align:center">●●●</td><td style="text-align:center">●●</td><td style="text-align:center">●●●</td></tr><tr><td><a href="#a5">A5 Suggestion acceptance rate</a></td><td style="text-align:center">●</td><td style="text-align:center">●</td><td style="text-align:center">●</td><td style="text-align:center">●</td></tr><tr><td><a href="#s1">S1 Cycle time (first commit → production)</a></td><td style="text-align:center">●●●</td><td style="text-align:center">●●</td><td style="text-align:center">●●●</td><td style="text-align:center">●●●</td></tr><tr><td><a href="#s2">S2 Lead time for changes (DORA)</a></td><td style="text-align:center">●●</td><td style="text-align:center">●●</td><td style="text-align:center">●</td><td style="text-align:center">●</td></tr><tr><td><a href="#q2">Q2 Rework rate</a></td><td style="text-align:center">●●</td><td style="text-align:center">●●●</td><td style="text-align:center">●●●</td><td style="text-align:center">●●</td></tr><tr><td><a href="#q8">Q8 Failed deployment recovery time</a></td><td style="text-align:center">●</td><td style="text-align:center">●●●</td><td style="text-align:center">●</td><td style="text-align:center">●●●</td></tr><tr><td><a href="#e1">E1 DevEx index (survey)</a></td><td style="text-align:center">●●</td><td style="text-align:center">●●</td><td style="text-align:center">●●</td><td style="text-align:center">●●</td></tr><tr><td><a href="#e3">E3 Friction hours lost / week</a></td><td style="text-align:center">●●</td><td style="text-align:center">●●</td><td style="text-align:center">●●</td><td style="text-align:center">●●</td></tr><tr><td><a href="#a2">A2 AI-assisted PR share</a></td><td style="text-align:center">●●</td><td style="text-align:center">●</td><td style="text-align:center">●●</td><td style="text-align:center">●</td></tr><tr><td><a href="#e2">E2 Perception gap check</a></td><td style="text-align:center">●●</td><td style="text-align:center">●●</td><td style="text-align:center">●●●</td><td style="text-align:center">●●●</td></tr><tr><td><a href="#a3">A3 AI vs non-AI PR comparison</a></td><td style="text-align:center">●●●</td><td style="text-align:center">●●</td><td style="text-align:center">●●●</td><td style="text-align:center">●●</td></tr><tr><td><a href="#q5">Q5 Code churn (early rewrite %)</a></td><td style="text-align:center">●●</td><td style="text-align:center">●●</td><td style="text-align:center">●●●</td><td style="text-align:center">●</td></tr><tr><td><a href="#q6">Q6 Code duplication %</a></td><td style="text-align:center">●</td><td style="text-align:center">●●●</td><td style="text-align:center">●●</td><td style="text-align:center">●</td></tr><tr><td><a href="#q7">Q7 Technical debt ratio</a></td><td style="text-align:center">●</td><td style="text-align:center">●●</td><td style="text-align:center">●●●</td><td style="text-align:center">●</td></tr><tr><td><a href="#a4">A4 Cost per merged PR</a></td><td style="text-align:center">●●</td><td style="text-align:center">●●●</td><td style="text-align:center">●●●</td><td style="text-align:center">●</td></tr><tr><td><a href="#s6">S6 Feature lead time (idea → production)</a></td><td style="text-align:center">●●●</td><td style="text-align:center">●●</td><td style="text-align:center">●●●</td><td style="text-align:center">●●●</td></tr><tr><td><a href="#i1">I1 % time on new capabilities</a></td><td style="text-align:center">●●●</td><td style="text-align:center">●●●</td><td style="text-align:center">●●</td><td style="text-align:center">●●</td></tr><tr><td><a href="#i4">I4 Hard savings realized (Green Money ledger)</a></td><td style="text-align:center">●●●</td><td style="text-align:center">●●●</td><td style="text-align:center">●●●</td><td style="text-align:center">●●●</td></tr>
+</table>
+<div class="callout warn"><strong>Reading the matrix:</strong> whatever the model, the backbone is the same —
+S1 cycle time, Q1/Q3 quality, E1 experience, I4 the ledger. The model changes WHERE the Green Money shows up:
+T&amp;M → freed capacity re-booked to billable work; Managed Services → margin at fixed fee + penalties avoided;
+Fixed Price → delivery under budgeted hours (track it or it vanishes); Outcome-Based → contracted KPI movement.
+Staff Augmentation is the odd one out: measure at the client-team level, never the individual, and lean on
+S1/Q3/E1 only.</div>
+
+<h2>Closing: the three questions every metric must survive</h2>
+<ul>
+<li><strong>What specific Green Money?</strong> Not "improved productivity" — a dollar amount on a P&amp;L line, a
+requisition number, an SLA schedule.</li>
+<li><strong>Who is personally accountable?</strong> A name, not a team.</li>
+<li><strong>How will we know in 6 months?</strong> A dated, measurable verification — not "we'll monitor it".</li>
+</ul>
+<p>If a proposed metric or claim can't answer all three, it can still be useful — as a diagnostic. It just doesn't
+belong in front of the client's CFO yet.</p>
+
+</main>
+<div class="footer">
+<strong>UST PE · GenAI Metrics Field Guide</strong> — companion to GenAI-Effectiveness-Metrics.xlsx (metric IDs match the workbook) · Teams and figures are illustrative examples
+</div>
+</div>
+</body>
+</html>
