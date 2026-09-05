@@ -1,0 +1,2930 @@
+<title>Under the Hood: Nine Questions</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Serif:ital,wght@0,400;0,500;1,400&display=swap">
+<style>
+  :root {
+    --ground: #f4f6f6;
+    --surface: #ffffff;
+    --surface-sunk: #eaeeef;
+    --ink: #0f1618;
+    --ink-soft: #354347;
+    --muted: #5f6c71;
+    --line: #dbe2e3;
+    --line-strong: #c3cdcf;
+    --accent: #0f766e;
+    --accent-soft: #d7ebe8;
+    --live: #15803d;
+    --live-soft: #dcf0e2;
+    --dead: #b3261e;
+    --dead-soft: #f7dedc;
+    --warn: #a16207;
+    --warn-soft: #f7ecd3;
+
+    --sans: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+    --serif: "IBM Plex Serif", Georgia, serif;
+    --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #0b1113; --surface: #141c1f; --surface-sunk: #0e1517;
+      --ink: #e7eded; --ink-soft: #c2cfd1; --muted: #8b9a9e;
+      --line: #253135; --line-strong: #35464b;
+      --accent: #2dd4bf; --accent-soft: #12312e;
+      --live: #4ade80; --live-soft: #122c1c;
+      --dead: #f87171; --dead-soft: #341917;
+      --warn: #e0b252; --warn-soft: #322612;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground: #0b1113; --surface: #141c1f; --surface-sunk: #0e1517;
+    --ink: #e7eded; --ink-soft: #c2cfd1; --muted: #8b9a9e;
+    --line: #253135; --line-strong: #35464b;
+    --accent: #2dd4bf; --accent-soft: #12312e;
+    --live: #4ade80; --live-soft: #122c1c;
+    --dead: #f87171; --dead-soft: #341917;
+    --warn: #e0b252; --warn-soft: #322612;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    background: var(--ground); color: var(--ink);
+    font-family: var(--serif); font-size: 16px; line-height: 1.65;
+    margin: 0; padding: 0 1.25rem 5rem;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 62rem; margin: 0 auto; }
+
+  header.top { padding: 3rem 0 1.75rem; border-bottom: 2px solid var(--line-strong); }
+  .eyebrow {
+    font-family: var(--mono); font-size: 0.72rem; letter-spacing: 0.14em;
+    text-transform: uppercase; color: var(--accent); margin: 0 0 0.9rem;
+  }
+  h1 {
+    font-family: var(--sans); font-weight: 700;
+    font-size: clamp(1.9rem, 4.5vw, 2.6rem); line-height: 1.12;
+    letter-spacing: -0.02em; text-wrap: balance; margin: 0 0 1rem;
+  }
+  .standfirst { font-size: 1.05rem; color: var(--ink-soft); max-width: 44rem; margin: 0; }
+
+  .progress {
+    display: flex; gap: 0.3rem; margin-top: 1.6rem; flex-wrap: wrap;
+    font-family: var(--mono); font-size: 0.72rem;
+  }
+  .progress a {
+    padding: 0.22rem 0.5rem; border-radius: 3px; text-decoration: none;
+    border: 1px solid var(--line-strong); color: var(--muted);
+    transition: border-color .15s ease, color .15s ease, background .15s ease;
+  }
+  .progress a.done { background: var(--accent); border-color: var(--accent); color: var(--ground); font-weight: 600; }
+  .progress a.written {
+    background: var(--warn-soft); border-color: var(--warn); border-style: dashed; color: var(--warn);
+  }
+  .progress a.written:hover, .progress a.written:focus-visible { background: var(--warn); color: var(--ground); }
+  .progress a.pending {
+    color: var(--line-strong); border-style: dashed; cursor: default; pointer-events: none;
+  }
+  .progress a.done:hover, .progress a.done:focus-visible {
+    background: var(--ink); border-color: var(--ink);
+  }
+  .progress a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  section.q { padding-top: 3rem; }
+  .q-head { display: flex; align-items: baseline; gap: 0.9rem; margin-bottom: 0.4rem; }
+  .q-num { font-family: var(--mono); font-size: 0.85rem; font-weight: 600; color: var(--accent); }
+  h2 {
+    font-family: var(--sans); font-weight: 700;
+    font-size: clamp(1.4rem, 3vw, 1.8rem); letter-spacing: -0.015em;
+    line-height: 1.2; text-wrap: balance; margin: 0;
+  }
+  h3 {
+    font-family: var(--sans); font-weight: 600; font-size: 1.12rem;
+    letter-spacing: -0.01em; margin: 2.4rem 0 0.7rem; color: var(--ink);
+  }
+  h4 {
+    font-family: var(--mono); font-size: 0.72rem; font-weight: 500;
+    letter-spacing: 0.13em; text-transform: uppercase; color: var(--muted);
+    margin: 1.7rem 0 0.6rem;
+  }
+  p { max-width: 44rem; margin: 0 0 0.9rem; }
+  strong { font-weight: 600; }
+  em.term { font-style: normal; font-weight: 600; color: var(--accent); }
+
+  code {
+    font-family: var(--mono); font-size: 0.86em;
+    background: var(--surface-sunk); border: 1px solid var(--line);
+    border-radius: 3px; padding: 0.08em 0.34em; color: var(--ink-soft);
+  }
+  pre {
+    font-family: var(--mono); font-size: 0.8rem; line-height: 1.6;
+    background: var(--surface-sunk); border: 1px solid var(--line);
+    border-radius: 4px; padding: 0.95rem 1.1rem; overflow-x: auto;
+    margin: 1rem 0; color: var(--ink-soft);
+  }
+  pre .k { color: var(--accent); }
+  pre .cmt { color: var(--muted); font-style: italic; }
+  pre .del { color: var(--dead); }
+
+  .src-tag {
+    font-family: var(--mono); font-size: 0.7rem; letter-spacing: 0.06em;
+    color: var(--muted); margin: 1.2rem 0 -0.4rem;
+  }
+
+  /* ---------- the machine ---------- */
+
+  .machine {
+    margin: 1.6rem 0 0; background: var(--surface);
+    border: 1px solid var(--line); border-radius: 6px; overflow: hidden;
+  }
+  .machine-bar {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 0.55rem;
+    padding: 0.75rem 1rem; border-bottom: 1px solid var(--line);
+    background: var(--surface-sunk);
+  }
+  .machine-bar .label {
+    font-family: var(--mono); font-size: 0.7rem; letter-spacing: 0.12em;
+    text-transform: uppercase; color: var(--muted); margin-right: auto;
+  }
+  button.step {
+    font-family: var(--sans); font-size: 0.82rem; font-weight: 500;
+    padding: 0.34rem 0.75rem; border-radius: 4px; cursor: pointer;
+    border: 1px solid var(--line-strong); background: var(--surface); color: var(--ink-soft);
+  }
+  button.step:hover { border-color: var(--accent); color: var(--accent); }
+  button.step:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  button.step.primary { background: var(--accent); border-color: var(--accent); color: var(--ground); font-weight: 600; }
+  button.step[disabled] { opacity: 0.4; cursor: default; }
+
+  .stage { padding: 1.4rem 1.2rem 1.2rem; }
+
+  .caption {
+    font-family: var(--sans); font-size: 0.9rem; color: var(--ink-soft);
+    min-height: 3.4rem; margin: 0 0 1.1rem; max-width: 46rem;
+  }
+  .caption b { color: var(--ink); font-weight: 600; }
+
+  .sessions { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; align-items: start; }
+  @media (max-width: 44rem) { .sessions { grid-template-columns: 1fr; } }
+
+  .sess {
+    border: 1px solid var(--line-strong); border-radius: 5px;
+    background: var(--surface); padding: 0.85rem 0.9rem;
+    transition: opacity .45s ease, border-color .45s ease, background .45s ease;
+  }
+  .sess.ghost { opacity: 0.32; }
+  .sess.dead { border-color: var(--dead); background: var(--dead-soft); }
+  .sess.active { border-color: var(--live); background: var(--live-soft); }
+
+  .sess-title {
+    display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;
+    font-family: var(--sans); font-weight: 600; font-size: 0.9rem; margin-bottom: 0.15rem;
+  }
+  .sess-sub { font-family: var(--mono); font-size: 0.68rem; color: var(--muted); margin-bottom: 0.6rem; }
+  .dot {
+    font-family: var(--mono); font-size: 0.66rem; padding: 0.12rem 0.4rem;
+    border-radius: 3px; background: var(--surface-sunk); color: var(--muted); white-space: nowrap;
+  }
+  .sess.active .dot { background: var(--live); color: var(--surface); }
+  .sess.dead .dot { background: var(--dead); color: var(--surface); }
+
+  .mem { display: grid; gap: 0.25rem; min-height: 5.6rem; }
+  .mem-item {
+    font-family: var(--mono); font-size: 0.7rem; padding: 0.28rem 0.45rem;
+    border-radius: 3px; background: var(--surface-sunk); color: var(--ink-soft);
+    border: 1px solid var(--line);
+    transition: opacity .5s ease, transform .5s ease, filter .5s ease;
+  }
+  .mem-item.seed { background: var(--accent-soft); border-color: var(--accent); color: var(--ink); }
+  .mem-item.gone { opacity: 0; transform: translateY(-6px); }
+  .mem-empty {
+    font-family: var(--sans); font-size: 0.78rem; color: var(--muted);
+    font-style: italic; padding: 0.3rem 0.1rem;
+    transition: opacity .5s ease;
+  }
+  .mem-empty.hide { opacity: 0; }
+
+  .flow {
+    text-align: center; font-family: var(--mono); font-size: 0.7rem;
+    color: var(--accent); margin: 0.9rem 0 0.5rem; min-height: 1.2rem;
+    opacity: 0; transition: opacity .45s ease;
+  }
+  .flow.show { opacity: 1; }
+
+  .state-bar {
+    margin-top: 0.6rem; border: 1px solid var(--line-strong); border-radius: 5px;
+    background: var(--surface); padding: 0.85rem 0.9rem;
+    transition: border-color .45s ease, box-shadow .45s ease;
+  }
+  .state-bar.pulse { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  .state-title {
+    font-family: var(--sans); font-weight: 600; font-size: 0.9rem; margin-bottom: 0.15rem;
+    display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; flex-wrap: wrap;
+  }
+  .state-title .where { font-family: var(--mono); font-size: 0.66rem; color: var(--muted); font-weight: 400; }
+  .fields { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-top: 0.55rem; }
+  .field {
+    font-family: var(--mono); font-size: 0.69rem; padding: 0.2rem 0.45rem;
+    border-radius: 3px; background: var(--surface-sunk); border: 1px solid var(--line); color: var(--ink-soft);
+  }
+  .field b { color: var(--ink); font-weight: 600; }
+
+  /* ---------- callouts ---------- */
+
+  /* ---------- two clocks (Q2) ---------- */
+
+  .clocks { display: grid; gap: 1.15rem; }
+
+  .clock-label {
+    display: flex; justify-content: space-between; align-items: baseline; gap: 0.6rem;
+    font-family: var(--sans); font-size: 0.88rem; font-weight: 600;
+    margin-bottom: 0.35rem; color: var(--ink);
+  }
+  .clock-state {
+    font-family: var(--mono); font-size: 0.68rem; font-weight: 400;
+    padding: 0.12rem 0.42rem; border-radius: 3px;
+    background: var(--surface-sunk); color: var(--muted); white-space: nowrap;
+  }
+  .clock-state.done { background: var(--warn-soft); color: var(--warn); }
+  .clock-state.cut  { background: var(--live-soft); color: var(--live); }
+  .clock-state.bad  { background: var(--dead-soft); color: var(--dead); }
+
+  .track {
+    position: relative; height: 30px; border-radius: 4px;
+    background: var(--surface-sunk); border: 1px solid var(--line); overflow: hidden;
+  }
+  .fill {
+    position: absolute; inset: 0 auto 0 0; width: 0;
+    transition: width .7s cubic-bezier(.4,0,.2,1), background .4s ease;
+  }
+  .fill.gen  { background: color-mix(in srgb, var(--accent) 32%, transparent); }
+  .fill.play { background: color-mix(in srgb, var(--live) 34%, transparent); }
+  .fill.play.overrun { background: color-mix(in srgb, var(--dead) 34%, transparent); }
+
+  .barge {
+    position: absolute; top: 0; bottom: 0; left: 46%; width: 2px;
+    background: var(--dead); opacity: 0;
+    transition: opacity .35s ease;
+  }
+  .barge.show { opacity: 1; }
+  .barge span {
+    position: absolute; top: -1.35rem; left: 50%; transform: translateX(-50%);
+    font-family: var(--mono); font-size: 0.66rem; color: var(--dead); white-space: nowrap;
+  }
+
+  .clock-note {
+    font-family: var(--sans); font-size: 0.78rem; color: var(--muted); margin-top: 0.3rem;
+  }
+
+  .verdict {
+    margin-top: 1.2rem; min-height: 2.4rem;
+    font-family: var(--sans); font-size: 0.89rem; line-height: 1.55;
+    padding: 0 0 0 0.9rem; border-left: 3px solid transparent;
+    color: var(--ink-soft); transition: border-color .3s ease;
+  }
+  .verdict.bad  { border-left-color: var(--dead); }
+  .verdict.good { border-left-color: var(--live); }
+  .verdict b { color: var(--ink); font-weight: 600; }
+
+  /* ---------- triggers + latch (Q3) ---------- */
+
+  .trig-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  @media (max-width: 40rem) { .trig-grid { grid-template-columns: 1fr; } }
+
+  .trig {
+    border: 1px solid var(--line-strong); border-radius: 5px; background: var(--surface);
+    padding: 0.85rem 0.9rem; transition: border-color .4s ease, background .4s ease, opacity .4s ease;
+  }
+  .trig.fired { border-color: var(--accent); background: var(--accent-soft); }
+  .trig.blocked { opacity: 0.4; }
+  .trig-title { font-family: var(--sans); font-weight: 600; font-size: 0.88rem; margin-bottom: 0.3rem; }
+  .trig-body { font-family: var(--mono); font-size: 0.76rem; color: var(--ink-soft); }
+
+  .latch {
+    margin-top: 1.1rem; display: flex; align-items: center; gap: 0.8rem; flex-wrap: wrap;
+    padding: 0.8rem 0.95rem; border: 1px solid var(--line-strong); border-radius: 5px;
+    background: var(--surface); transition: border-color .4s ease;
+  }
+  .latch.set { border-color: var(--dead); }
+  .latch-title { font-family: var(--mono); font-size: 0.78rem; font-weight: 600; }
+  .latch-box {
+    font-family: var(--mono); font-size: 0.76rem; font-weight: 600;
+    padding: 0.2rem 0.55rem; border-radius: 3px; background: var(--surface-sunk); color: var(--muted);
+    transition: background .3s ease, color .3s ease;
+  }
+  .latch.set .latch-box { background: var(--dead-soft); color: var(--dead); }
+  .latch-note { font-family: var(--sans); font-size: 0.8rem; color: var(--muted); }
+
+  /* ---------- keyword search (Q4) ---------- */
+
+  .q4-query {
+    font-family: var(--mono); font-size: 0.98rem; font-weight: 500;
+    padding: 0.6rem 0.85rem; border-radius: 4px; margin-bottom: 1rem;
+    background: var(--surface-sunk); border: 1px solid var(--line); color: var(--ink);
+  }
+
+  .q4-tokens {
+    display: flex; flex-wrap: wrap; gap: 0.4rem; min-height: 2.4rem; margin-bottom: 1.15rem;
+  }
+  .q4-tok {
+    font-family: var(--mono); font-size: 0.78rem; padding: 0.22rem 0.55rem; border-radius: 3px;
+    border: 1px solid var(--line-strong); color: var(--ink-soft); background: var(--surface);
+    transition: opacity .4s ease, text-decoration-color .4s ease, border-color .3s ease, background .3s ease;
+  }
+  .q4-tok.dropped { opacity: 0.4; text-decoration: line-through; text-decoration-color: var(--dead); }
+  .q4-tok.kept { border-color: var(--accent); color: var(--ink); background: var(--accent-soft); }
+
+  .q4-article {
+    border: 1px solid var(--line-strong); border-radius: 5px; background: var(--surface);
+    padding: 0.9rem 1rem; margin-bottom: 0.4rem;
+  }
+  .q4a-title { font-family: var(--sans); font-weight: 600; font-size: 0.86rem; margin-bottom: 0.6rem; }
+  .q4a-row { display: flex; gap: 0.7rem; align-items: baseline; margin-bottom: 0.4rem; flex-wrap: wrap; }
+  .q4a-label {
+    font-family: var(--mono); font-size: 0.66rem; letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--muted); flex: none; width: 11rem;
+  }
+  .q4a-cells { font-family: var(--mono); font-size: 0.8rem; color: var(--ink-soft); }
+  .q4a-cells mark {
+    background: transparent; color: var(--dead); font-weight: 600; padding: 0;
+    border-bottom: 2px solid var(--dead); transition: color .4s ease, border-color .4s ease;
+  }
+  .q4a-cells mark.safe { color: var(--live); border-color: var(--live); text-decoration: line-through; }
+  .q4a-cells .hit { color: var(--accent); font-weight: 600; }
+  .q4a-cells .miss { opacity: 0.55; }
+
+  /* ---------- ladder (Q5) ---------- */
+
+  .ladder5 { display: grid; gap: 0.5rem; margin: 1rem 0 1.1rem; }
+  .l5step {
+    display: grid; grid-template-columns: 8rem 1.6rem 1fr; align-items: center; gap: 0.7rem;
+    padding: 0.55rem 0.8rem; border: 1px solid var(--line); border-radius: 4px;
+    background: var(--surface); transition: border-color .35s ease, background .35s ease, opacity .35s ease;
+  }
+  .l5step.skip { opacity: 0.45; }
+  .l5step.pass { border-color: var(--live); background: var(--live-soft); }
+  .l5step.fail { border-color: var(--dead); background: var(--dead-soft); }
+  .l5name { font-family: var(--mono); font-size: 0.76rem; color: var(--ink-soft); }
+  .l5icon {
+    font-family: var(--mono); font-size: 0.95rem; font-weight: 700; text-align: center;
+    color: var(--muted); transition: color .3s ease;
+  }
+  .l5step.pass .l5icon { color: var(--live); }
+  .l5step.fail .l5icon { color: var(--dead); }
+  .l5detail { font-family: var(--sans); font-size: 0.82rem; color: var(--ink-soft); }
+
+  /* ---------- tap decode (Q5) ---------- */
+
+  .tap-row { display: flex; align-items: center; gap: 1.3rem; flex-wrap: wrap; margin: 0.8rem 0 1rem; }
+  .tap-key {
+    width: 3.4rem; height: 3.4rem; border-radius: 8px; display: flex; align-items: center; justify-content: center;
+    font-family: var(--sans); font-size: 1.5rem; font-weight: 700;
+    background: var(--surface-sunk); border: 1px solid var(--line-strong); color: var(--ink);
+    transition: transform .12s ease, border-color .2s ease, background .2s ease;
+  }
+  .tap-key.press { transform: scale(0.92); border-color: var(--accent); background: var(--accent-soft); }
+
+  .tap-cycle { display: flex; gap: 0.4rem; }
+  .tap-opt {
+    width: 2.1rem; height: 2.1rem; border-radius: 4px; display: flex; align-items: center; justify-content: center;
+    font-family: var(--mono); font-size: 0.9rem; border: 1px solid var(--line); color: var(--muted);
+    transition: border-color .3s ease, color .3s ease, background .3s ease;
+  }
+  .tap-opt.active { border-color: var(--accent); color: var(--ink); background: var(--accent-soft); font-weight: 700; }
+  .tap-opt.committed { border-color: var(--live); color: var(--live); }
+
+  .tap-buffer { font-family: var(--mono); font-size: 1rem; color: var(--ink); }
+  .tap-pending { color: var(--accent); font-weight: 700; }
+
+  /* ---------- transaction timeline (Q7) ---------- */
+
+  .tx-timeline { margin-bottom: 1rem; }
+  .tx-clock {
+    font-family: var(--mono); font-size: 0.82rem; font-weight: 600; color: var(--ink);
+    margin-bottom: 0.5rem;
+  }
+  .tx-track {
+    position: relative; height: 26px; border-radius: 4px;
+    background: var(--surface-sunk); border: 1px solid var(--line); overflow: visible;
+  }
+  .tx-window {
+    position: absolute; inset: 0; width: 0; border-radius: 4px 0 0 4px;
+    background: color-mix(in srgb, var(--accent) 26%, transparent);
+    transition: width .6s ease;
+  }
+  .tx-now {
+    position: absolute; top: -4px; bottom: -4px; left: 0; width: 3px; border-radius: 2px;
+    background: var(--ink); transition: left .6s cubic-bezier(.4,0,.2,1), background .3s ease;
+  }
+  .tx-now.late { background: var(--dead); }
+  .tx-labels {
+    display: flex; justify-content: space-between; margin-top: 0.3rem;
+    font-family: var(--mono); font-size: 0.68rem; color: var(--muted);
+  }
+
+  .tx-compare {
+    width: 100%; border-collapse: collapse; font-family: var(--sans); font-size: 0.87rem;
+    margin: 1.3rem 0 1.1rem;
+  }
+  .tx-compare th, .tx-compare td { padding: 0.5rem 0.8rem; border: 1px solid var(--line); text-align: left; }
+  .tx-compare th { font-family: var(--mono); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); background: var(--surface-sunk); }
+  .tx-compare td:first-child { font-family: var(--mono); font-size: 0.76rem; color: var(--muted); background: var(--surface-sunk); }
+  .tx-compare td { color: var(--ink-soft); }
+
+  /* ---------- version rows (Q8) ---------- */
+
+  .q8-rows { display: grid; gap: 0.45rem; margin-bottom: 0.8rem; }
+  .q8-row {
+    display: grid; grid-template-columns: 1fr auto 11rem; align-items: center; gap: 0.7rem;
+    padding: 0.55rem 0.8rem; border: 1px solid var(--line); border-radius: 4px;
+    background: var(--surface); transition: border-color .4s ease, background .4s ease, opacity .4s ease;
+  }
+  .q8-row.tried-blocked { border-color: var(--dead); background: var(--dead-soft); }
+  .q8-row.tried-ok { border-color: var(--live); background: var(--live-soft); }
+  .q8-row.dim { opacity: 0.5; }
+  .q8-name { font-family: var(--mono); font-size: 0.82rem; color: var(--ink); }
+  .q8-badge {
+    font-family: var(--mono); font-size: 0.66rem; letter-spacing: 0.06em; text-transform: uppercase;
+    padding: 0.16rem 0.5rem; border-radius: 3px; background: var(--surface-sunk); color: var(--muted);
+    transition: background .4s ease, color .4s ease;
+  }
+  .q8-badge.live { background: var(--accent); color: var(--ground); font-weight: 700; }
+  .q8-reg { font-family: var(--sans); font-size: 0.78rem; color: var(--muted); text-align: right; }
+  .q8-reg.bad { color: var(--dead); }
+
+  /* ---------- not-built banner + parallel race (Q9) ---------- */
+
+  .notbuilt {
+    margin: 1.4rem 0 1.9rem; padding: 1rem 1.2rem;
+    border: 1.5px dashed var(--dead); border-radius: 5px;
+    background: var(--dead-soft); font-family: var(--sans); font-size: 0.92rem;
+    color: var(--ink-soft); line-height: 1.6;
+  }
+  .notbuilt-tag {
+    display: block; font-family: var(--mono); font-size: 0.68rem; letter-spacing: 0.12em;
+    text-transform: uppercase; color: var(--dead); margin-bottom: 0.5rem; font-weight: 600;
+  }
+
+  .parallel-track { display: grid; gap: 0.6rem; margin-top: 0.6rem; }
+  .parallel-row { display: flex; align-items: center; gap: 0.8rem; }
+  .parallel-label {
+    font-family: var(--mono); font-size: 0.76rem; color: var(--ink-soft); width: 6.5rem; flex: none;
+  }
+  .parallel-bar {
+    flex: 1; height: 20px; border-radius: 4px; background: var(--surface-sunk);
+    border: 1px solid var(--line); overflow: hidden;
+  }
+  .parallel-fill { height: 100%; width: 0; border-radius: 4px; }
+  .audio-fill { background: color-mix(in srgb, var(--accent) 40%, transparent); animation: fillrace 1.8s ease-out 0.3s forwards; }
+  .text-fill { background: color-mix(in srgb, var(--warn) 40%, transparent); animation: fillrace 1.8s ease-out 0.3s forwards; }
+  @keyframes fillrace { to { width: 100%; } }
+
+  figure.fig {
+    margin: 1.5rem 0 1.6rem; padding: 1.2rem 1.1rem 0.9rem;
+    background: var(--surface); border: 1px solid var(--line);
+    border-radius: 6px;
+  }
+  figure.fig svg {
+    display: block; width: 100%; height: auto; max-width: 55rem;
+    margin: 0 auto; color: var(--ink-soft);
+  }
+  figure.fig figcaption {
+    margin-top: 1rem; padding-top: 0.85rem; border-top: 1px solid var(--line);
+    font-family: var(--sans); font-size: 0.86rem; color: var(--muted);
+    max-width: 46rem;
+  }
+
+  .callout {
+    margin: 1.5rem 0; padding: 1.05rem 1.25rem; border-radius: 0 4px 4px 0;
+    background: var(--accent-soft); border-left: 3px solid var(--accent);
+  }
+  .callout p { margin: 0; font-size: 0.97rem; color: var(--ink-soft); }
+  .callout p + p { margin-top: 0.6rem; }
+  .callout .tag {
+    font-family: var(--mono); font-size: 0.68rem; letter-spacing: 0.13em;
+    text-transform: uppercase; color: var(--accent); display: block; margin-bottom: 0.45rem;
+  }
+
+  .disclaimer {
+    margin: 2.2rem 0 0; border: 1px solid var(--warn);
+    border-radius: 5px; background: var(--warn-soft); overflow: hidden;
+  }
+  .disclaimer-head {
+    font-family: var(--sans); font-weight: 600; font-size: 0.95rem;
+    padding: 0.8rem 1.15rem; border-bottom: 1px solid var(--warn);
+    color: var(--ink); display: flex; align-items: center; gap: 0.5rem;
+  }
+  .disclaimer-head .marker {
+    font-family: var(--mono); font-size: 0.66rem; letter-spacing: 0.1em;
+    text-transform: uppercase; background: var(--warn); color: var(--surface);
+    padding: 0.15rem 0.45rem; border-radius: 3px;
+  }
+  .disclaimer .body { padding: 0.4rem 1.15rem 1.1rem; }
+  .disclaimer table { width: 100%; border-collapse: collapse; font-family: var(--sans); font-size: 0.87rem; min-width: 32rem; }
+  .disclaimer th {
+    text-align: left; font-family: var(--mono); font-size: 0.66rem; letter-spacing: 0.1em;
+    text-transform: uppercase; color: var(--muted); font-weight: 500;
+    padding: 0.7rem 0.9rem 0.45rem 0; border-bottom: 1px solid var(--warn);
+  }
+  .disclaimer td {
+    padding: 0.6rem 0.9rem 0.6rem 0; border-bottom: 1px solid color-mix(in srgb, var(--warn) 30%, transparent);
+    vertical-align: top; color: var(--ink-soft);
+  }
+  .disclaimer td:first-child { color: var(--ink); font-weight: 500; }
+  .disclaimer tr:last-child td { border-bottom: none; }
+  .scroll-x { overflow-x: auto; }
+
+  .open-q {
+    margin-top: 1rem; padding-top: 0.9rem;
+    border-top: 1px dashed var(--warn);
+    font-size: 0.9rem; color: var(--ink-soft);
+  }
+  .open-q b { color: var(--ink); }
+
+  footer.serial {
+    margin-top: 4rem; padding-top: 1.6rem; border-top: 1px solid var(--line);
+    font-family: var(--sans); font-size: 0.88rem; color: var(--muted);
+  }
+
+  /* ---------- sidebar nav ---------- */
+
+  .layout {
+    display: grid; grid-template-columns: 160px 1fr; gap: 2rem; width: 80%; max-width: none; margin: 0 auto;
+  }
+  @media (max-width: 900px) {
+    .layout { width: 90%; }
+  }
+  @media (max-width: 700px) {
+    .layout { grid-template-columns: 1fr; width: 100%; }
+    .sidebar { display: none; }
+  }
+
+  .sidebar {
+    position: sticky; top: 2rem; height: fit-content;
+    font-family: var(--sans); font-size: 0.85rem;
+  }
+  .sidebar-title {
+    font-weight: 600; font-size: 0.7rem; letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--muted); margin-bottom: 1rem; display: block;
+  }
+  .sidebar-nav { display: flex; flex-direction: column; gap: 0.4rem; }
+  .sidebar-nav a {
+    display: flex; align-items: center; gap: 0.5rem;
+    padding: 0.5rem 0.75rem; border-radius: 4px; text-decoration: none;
+    color: var(--ink-soft); border-left: 3px solid transparent;
+    transition: border-color .2s ease, background .2s ease, color .2s ease;
+  }
+  .sidebar-nav a:hover {
+    background: var(--surface-sunk); color: var(--ink); border-left-color: var(--accent);
+  }
+  .sidebar-nav a:focus-visible {
+    outline: 2px solid var(--accent); outline-offset: 2px;
+  }
+  .sidebar-nav a.active {
+    background: var(--accent-soft); color: var(--ink); border-left-color: var(--accent); font-weight: 600;
+  }
+  .sidebar-nav .q-label {
+    font-family: var(--mono); font-size: 0.75rem; font-weight: 600;
+    color: var(--accent); min-width: 1.8rem;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; animation: none !important; }
+    .parallel-fill { width: 100% !important; }
+  }
+</style>
+
+<div class="layout">
+  <aside class="sidebar">
+    <span class="sidebar-title">Jump to question</span>
+    <nav class="sidebar-nav">
+      <a href="#q1"><span class="q-label">Q1</span> Carrying state</a>
+      <a href="#q2"><span class="q-label">Q2</span> Barge-in</a>
+      <a href="#q3"><span class="q-label">Q3</span> Human handoff</a>
+      <a href="#q4"><span class="q-label">Q4</span> Knowledge base</a>
+      <a href="#q5"><span class="q-label">Q5</span> Capture values</a>
+      <a href="#q6"><span class="q-label">Q6</span> Audit trail</a>
+      <a href="#q7"><span class="q-label">Q7</span> Guardrails</a>
+      <a href="#q8"><span class="q-label">Q8</span> Model versions</a>
+      <a href="#q9"><span class="q-label">Q9</span> Speech pipeline</a>
+    </nav>
+  </aside>
+
+  <div class="wrap">
+
+  <header class="top">
+    <p class="eyebrow">Technical deep dive · Built from the running code</p>
+    <h1>Under the Hood: Nine Questions</h1>
+    <p class="standfirst">
+      What the proof of concept actually does, mechanism by mechanism, and exactly where the
+      simulation stops and a real implementation would have to begin. One question at a time.
+    </p>
+    <div class="progress" id="progress">
+      <a class="done" href="#q1">Q1</a><a class="done" href="#q2">Q2</a><a class="done" href="#q3">Q3</a>
+      <a class="done" href="#q4">Q4</a><a class="done" href="#q5">Q5</a><a class="done" href="#q6">Q6</a>
+      <a class="done" href="#q7">Q7</a><a class="done" href="#q8">Q8</a><a class="written" href="#q9">Q9</a>
+    </div>
+  </header>
+
+  <section class="q" id="q1">
+    <div class="q-head"><span class="q-num">Q1</span><h2>Carrying state across Realtime sessions</h2></div>
+
+    <h3>First, what a "session" actually is</h3>
+    <p>
+      This is the concept everything else in Q1 rests on, and it is the one most people get wrong.
+    </p>
+    <p>
+      A <em class="term">Realtime session</em> is a WebSocket connection to OpenAI. The conversation
+      history for that call lives <strong>on OpenAI's servers</strong>, bound to that specific
+      connection. Your code does not hold it. You cannot query it. And critically: there is no
+      "resume session" API. When the socket closes, that accumulated history is not archived
+      somewhere for later. It is gone.
+    </p>
+    <p>
+      So when a call flow moves from one AI Agent block to the next and the next block opens its own
+      session, the new session does not start with less context. It starts with <strong>none</strong>.
+      A brand new model instance that has never heard of this caller.
+    </p>
+
+    <div class="callout">
+      <span class="tag">The distinction that unlocks this</span>
+      <p>
+        The word "context" is doing two different jobs, and separating them is the whole answer.
+      </p>
+      <p>
+        <strong>Conversation memory</strong> is the model's running history. It lives inside the
+        session and dies with it. <strong>Application state</strong> is what your business actually
+        needs to know: which field is being captured, what validated, whether the caller confirmed
+        it. That can live wherever you decide to put it.
+      </p>
+      <p>
+        The mistake is treating them as the same thing and therefore trying to preserve the session.
+        The fix is to stop caring about the session at all.
+      </p>
+    </div>
+
+    <h3>The architecture, drawn by lifetime</h3>
+    <p>
+      Most architecture diagrams organise by component. This one organises by <strong>how long each
+      thing lives</strong>, because that is the only axis Q1 actually turns on. Notice which shapes
+      cross the block boundary and which ones stop dead at it.
+    </p>
+
+    <figure class="fig">
+      <svg viewBox="0 0 880 400" role="img" width="880" height="400"
+           aria-label="Components banded by lifetime. The Realtime session boxes stop at the block boundary; the relay process, CallState, and durable storage bars run straight through it. A reseed arrow carries state from CallState into the new session.">
+
+        <defs>
+          <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <polygon points="0,0 10,5 0,10" fill="currentColor"/>
+          </marker>
+          <marker id="ar-accent" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <polygon points="0,0 10,5 0,10" fill="var(--accent)"/>
+          </marker>
+        </defs>
+
+        <!-- column headers -->
+        <text x="295" y="26" text-anchor="middle" font-size="12" font-weight="600" fill="currentColor">Block 1</text>
+        <text x="672" y="26" text-anchor="middle" font-size="12" font-weight="600" fill="currentColor">Block 2</text>
+
+        <!-- the block boundary -->
+        <line x1="460" y1="14" x2="460" y2="378" stroke="currentColor" stroke-width="1.5"
+              stroke-dasharray="5 5" opacity="0.55"/>
+        <text x="460" y="392" text-anchor="middle" font-size="10.5" fill="currentColor" opacity="0.7">block boundary</text>
+
+        <!-- band labels -->
+        <text x="150" y="82" text-anchor="end" font-size="11.5" font-weight="600" fill="var(--dead)">dies at the boundary</text>
+        <text x="150" y="98" text-anchor="end" font-size="10.5" fill="currentColor" opacity="0.65">one AI Agent block</text>
+
+        <text x="150" y="207" text-anchor="end" font-size="11.5" font-weight="600" fill="currentColor">survives the call</text>
+        <text x="150" y="223" text-anchor="end" font-size="10.5" fill="currentColor" opacity="0.65">in-process</text>
+
+        <text x="150" y="330" text-anchor="end" font-size="11.5" font-weight="600" fill="currentColor">outlives the process</text>
+        <text x="150" y="346" text-anchor="end" font-size="10.5" fill="currentColor" opacity="0.65">on disk</text>
+
+        <!-- band 1: sessions, they stop at the boundary -->
+        <rect x="175" y="52" width="240" height="76" rx="4" fill="none" stroke="var(--dead)" stroke-width="1.5"/>
+        <text x="295" y="76" text-anchor="middle" font-size="12" font-weight="600" fill="currentColor">Realtime session #1</text>
+        <text x="295" y="94" text-anchor="middle" font-size="10.5" fill="currentColor" opacity="0.75">memory: 4 turns of dialogue</text>
+        <text x="295" y="112" text-anchor="middle" font-size="10.5" fill="currentColor" opacity="0.75">held by OpenAI, not by you</text>
+
+        <!-- severed socket marker -->
+        <line x1="415" y1="90" x2="447" y2="90" stroke="var(--dead)" stroke-width="1.5"/>
+        <line x1="428" y1="80" x2="436" y2="100" stroke="var(--dead)" stroke-width="2"/>
+        <line x1="436" y1="80" x2="444" y2="100" stroke="var(--dead)" stroke-width="2"/>
+        <text x="430" y="70" text-anchor="middle" font-size="10" fill="var(--dead)">closed</text>
+
+        <rect x="525" y="52" width="240" height="76" rx="4" fill="none" stroke="currentColor" stroke-width="1.5"/>
+        <text x="645" y="76" text-anchor="middle" font-size="12" font-weight="600" fill="currentColor">Realtime session #2</text>
+        <text x="645" y="94" text-anchor="middle" font-size="10.5" fill="currentColor" opacity="0.75">memory: the preamble only</text>
+        <text x="645" y="112" text-anchor="middle" font-size="10.5" fill="currentColor" opacity="0.75">a blank model, freshly told</text>
+
+        <!-- band 2: relay + CallState, spanning straight through -->
+        <rect x="175" y="166" width="590" height="100" rx="4" fill="none" stroke="currentColor" stroke-width="1.5"/>
+        <text x="188" y="186" font-size="11.5" font-weight="600" fill="currentColor">Relay process · holds both sockets</text>
+
+        <rect x="192" y="198" width="556" height="52" rx="3" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1.5"/>
+        <text x="206" y="218" font-size="12" font-weight="600" fill="currentColor">CallState · keyed by callId</text>
+        <text x="206" y="236" font-size="10.5" fill="currentColor" opacity="0.8">field=policy_id · tier=1 · validatedValue=BN742D · confirmationState=pending</text>
+
+        <!-- band 3: disk, spanning straight through -->
+        <rect x="175" y="298" width="590" height="52" rx="4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-dasharray="3 3"/>
+        <text x="188" y="318" font-size="11.5" font-weight="600" fill="currentColor">data/calls/&lt;callId&gt;/state.json</text>
+        <text x="188" y="336" font-size="10.5" fill="currentColor" opacity="0.75">opt-in, written on every state change</text>
+
+        <!-- audio arrow: relay up to session 1 -->
+        <line x1="270" y1="166" x2="270" y2="132" stroke="currentColor" stroke-width="1.5" marker-end="url(#ar)"/>
+        <text x="280" y="152" font-size="10.5" fill="currentColor" opacity="0.8">audio</text>
+
+        <!-- reseed arrow: CallState up into session 2 — the meaningful path -->
+        <path d="M 690 198 L 690 132" fill="none" stroke="var(--accent)" stroke-width="2" marker-end="url(#ar-accent)"/>
+        <text x="700" y="158" font-size="10.5" font-weight="600" fill="var(--accent)">reseedPreamble(state)</text>
+
+        <!-- persistence arrow -->
+        <line x1="250" y1="250" x2="250" y2="296" stroke="currentColor" stroke-width="1.5" marker-end="url(#ar)"/>
+        <text x="260" y="278" font-size="10.5" fill="currentColor" opacity="0.8">mirrored on write</text>
+      </svg>
+      <figcaption>
+        The session boxes stop at the boundary. The relay, CallState, and the durable file run
+        straight through it. Q1 is solved by moving what matters from the top band into the ones
+        below it.
+      </figcaption>
+    </figure>
+
+    <p>
+      Reading it in one sentence: <strong>the top band is disposable and the bands below it are
+      not</strong>, so the fix is to make sure nothing you need is only in the top band. The teal
+      arrow is the entire transition, one function reading one store and writing a sentence into a
+      new session's instructions.
+    </p>
+
+    <h3>The mechanism, step by step</h3>
+    <p>
+      Step through this. The thing to watch is which box survives the transition and which one does
+      not.
+    </p>
+
+    <div class="machine">
+      <div class="machine-bar">
+        <span class="label">Block transition</span>
+        <button class="step" id="prev" type="button">Back</button>
+        <button class="step primary" id="next" type="button">Step forward</button>
+        <button class="step" id="reset" type="button">Reset</button>
+      </div>
+
+      <div class="stage">
+        <p class="caption" id="caption">
+          <b>Mid-call, inside Block 1.</b> The caller has given their policy ID and it has validated.
+          Two separate things now hold information: the session's conversation memory, and CallState
+          in the orchestrator.
+        </p>
+
+        <div class="sessions">
+          <div class="sess active" id="s1">
+            <div class="sess-title">Block 1 · Realtime session <span class="dot" id="s1dot">socket open</span></div>
+            <div class="sess-sub">memory held by OpenAI, not by you</div>
+            <div class="mem" id="s1mem">
+              <div class="mem-item">"Hello, can I take your policy ID?"</div>
+              <div class="mem-item">caller audio → "B N 7 4 2 D"</div>
+              <div class="mem-item">submit_captured_field("BN742D")</div>
+              <div class="mem-item">"B-N-7-4-2-D. Is that right?"</div>
+            </div>
+          </div>
+
+          <div class="sess ghost" id="s2">
+            <div class="sess-title">Block 2 · Realtime session <span class="dot" id="s2dot">not opened</span></div>
+            <div class="sess-sub">a different socket, a blank model</div>
+            <div class="mem" id="s2mem">
+              <div class="mem-empty" id="s2empty">no memory of anything</div>
+            </div>
+          </div>
+        </div>
+
+        <p class="flow" id="flow">↓ &nbsp; reseedPreamble(state) &nbsp; ↓</p>
+
+        <div class="state-bar" id="statebar">
+          <div class="state-title">
+            CallState · survives every session
+            <span class="where">call-state-store.ts, keyed by callId</span>
+          </div>
+          <div class="fields">
+            <span class="field">field: <b>policy_id</b></span>
+            <span class="field">tier: <b>1</b></span>
+            <span class="field">validatedValue: <b>BN742D</b></span>
+            <span class="field">confirmationState: <b>pending</b></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <h3>What gets sent, and what deliberately does not</h3>
+    <p>
+      The reseed is a <strong>short structured summary, never the raw transcript</strong>. It is
+      generated by a plain function reading CallState. Three branches, depending on how far the
+      caller actually got:
+    </p>
+
+<pre><span class="cmt">// a value validated, and they already confirmed it out loud</span>
+"This call is continuing from an earlier block. The caller already provided
+ their policy_id, and it has already been validated as BN742D. Do not ask
+ for it again. <span class="k">They already confirmed it verbally — do not read it back again.</span>"
+
+<span class="cmt">// validated, but not yet confirmed — different instruction</span>
+"...validated as BN742D. Do not ask for it again. <span class="k">They have not yet verbally
+ confirmed it — read it back once, then confirm, before continuing.</span>"
+
+<span class="cmt">// mid-capture, nothing validated</span>
+"...The caller was in the middle of providing their policy_id at Tier 2 but
+ had not completed it. Continue from there — do not restart with a fresh greeting."</pre>
+
+    <p>
+      Notice the second branch. The state carries not just <em>a value</em> but <em>how much that
+      value has been through</em>, and the instruction changes accordingly. Losing that distinction
+      would mean either re-reading a value the caller already confirmed, or acting on one they never
+      did.
+    </p>
+
+    <h4>The three things this deliberately is not</h4>
+    <p>
+      These are constraints in the code, not accidents, and each one is worth being able to defend:
+    </p>
+    <p>
+      <strong>1. It does not replay what the caller said.</strong> Cost and latency scale with
+      transcript length, and worse, a model handed old dialogue can misread past phrasing as a new
+      instruction.
+    </p>
+    <p>
+      <strong>2. It never claims the caller confirmed something CallState does not say they
+      confirmed.</strong> The preamble cannot invent provenance, because it is generated from
+      structured fields rather than written by a model summarising a conversation.
+    </p>
+    <p>
+      <strong>3. It never asks the new session to trust anything except what the orchestrator itself
+      already decided.</strong> The new session is handed a <em>conclusion</em>, not a memory to
+      re-interpret.
+    </p>
+
+    <h4>And the tone problem, which is the part teams miss</h4>
+    <p>
+      The data usually does carry over fine. What breaks the illusion is that the new block fires its
+      default greeting anyway. "Hello, how can I help you today?" Nothing was lost, but to the caller
+      it sounds like everything was. That is why every branch of the preamble ends with an explicit
+      behavioural instruction, not just facts: <code>Do not ask for it again</code>,
+      <code>do not restart with a fresh greeting</code>.
+    </p>
+
+    <h3>Where the state actually lives</h3>
+    <p>
+      Originally CallState was an in-memory <code>Map</code>. That survives a session closing, which
+      is what Q1 asks about, but it does not survive the process itself dying. So it was extended:
+      CallState, the audit log, and captured audio now also write to disk, and a brand new connection
+      can rebuild a call from those files with nothing in memory. That is the harder version of the
+      same claim, and it matters for the disclaimer below.
+    </p>
+
+    <div class="disclaimer">
+      <div class="disclaimer-head">
+        <span class="marker">Disclaimer</span>
+        What a real implementation has to change
+      </div>
+      <div class="body">
+        <div class="scroll-x">
+          <table>
+            <thead>
+              <tr><th>In the POC</th><th>In production</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>A "Simulate next AI Agent block" button triggers the transition.</td>
+                <td>The call-flow platform triggers it as a real hop between blocks. Nothing in the POC proves that integration, because there is no platform here to integrate with.</td>
+              </tr>
+              <tr>
+                <td>CallState lives in an in-process Map, mirrored to local disk.</td>
+                <td>If each block can land on a <strong>different service instance</strong>, local disk is not reachable from the next one. This needs a network-reachable store: Redis, Postgres, or equivalent. The code is structured so this is a swap behind one module, not a rewrite.</td>
+              </tr>
+              <tr>
+                <td>The callId is generated by the relay itself.</td>
+                <td>It must be an identifier the platform guarantees is stable for the whole call and passed to whichever instance handles each block. Without that, there is no key to look the state up by.</td>
+              </tr>
+              <tr>
+                <td>Resume is demonstrated by a second browser connection to the same running backend.</td>
+                <td>Nothing here proves a genuinely separate <em>process</em> picked it up. It proves only that nothing in memory was reused, which is a weaker claim than the production case needs.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p class="open-q">
+          <b>The open question worth asking back:</b> do these blocks actually need separate sessions
+          at all? If the platform can keep one session alive across blocks and simply swap its
+          instructions as the flow moves, this entire problem disappears rather than being solved
+          after the fact. That answer changes which half of this work is even needed, so it is worth
+          settling before building the store.
+        </p>
+      </div>
+    </div>
+
+  </section>
+
+  <section class="q" id="q2">
+    <div class="q-head"><span class="q-num">Q2</span><h2>Who owns barge-in</h2></div>
+
+    <h3>The positional problem, before the technical one</h3>
+    <p>
+      Barge-in is the caller talking while the bot is mid-sentence, and the system stopping to
+      listen. Before any of the mechanism matters, notice why they cannot do it today: with the
+      Realtime session wired straight to the SIP leg, the caller's audio goes to OpenAI and their own
+      code is not in that path. You cannot interrupt a conversation you are not part of.
+    </p>
+    <p>
+      Moving to WebSocket is not interesting because of the protocol. It is interesting because of
+      <strong>where it lets you sit</strong>. Every frame now passes through code you control, in
+      both directions, which is what makes every mechanism below possible.
+    </p>
+
+    <h3>The two clocks, and why this breaks silently</h3>
+    <p>
+      Here is the part that catches teams out, and it is the single most useful thing to be able to
+      explain about Q2.
+    </p>
+    <p>
+      When the model produces a response, <strong>audio arrives from the API far faster than it
+      plays</strong>. Generation of a five second sentence can finish in well under a second. So
+      <code>response.done</code> fires, and the model is finished, while the caller is still four
+      seconds from hearing the end of it.
+    </p>
+    <p>
+      That means "is the model still generating?" and "is the caller still hearing something?" are
+      two different clocks, and they disagree for most of every response. Gate your barge-in on the
+      wrong one and it does nothing at all for the majority of the audible sentence, while looking
+      completely correct in the code.
+    </p>
+
+    <div class="machine">
+      <div class="machine-bar">
+        <span class="label">Two clocks</span>
+        <button class="step" id="p2" type="button">Back</button>
+        <button class="step primary" id="n2" type="button">Step forward</button>
+        <button class="step" id="r2" type="button">Reset</button>
+      </div>
+
+      <div class="stage">
+        <p class="caption" id="cap2">
+          <b>The bot begins a five second read-back.</b> Two things start at once: OpenAI generating
+          the audio, and the caller actually hearing it. They do not run at the same speed.
+        </p>
+
+        <div class="clocks">
+          <div class="clock">
+            <div class="clock-label">
+              <span>Model generation</span>
+              <span class="clock-state" id="genstate">running</span>
+            </div>
+            <div class="track"><div class="fill gen" id="genfill"></div></div>
+            <div class="clock-note">finishes early, then <code>response.done</code> fires</div>
+          </div>
+
+          <div class="clock">
+            <div class="clock-label">
+              <span>What the caller has heard</span>
+              <span class="clock-state" id="playstate">playing</span>
+            </div>
+            <div class="track">
+              <div class="fill play" id="playfill"></div>
+              <div class="barge" id="barge"><span>caller speaks</span></div>
+            </div>
+            <div class="clock-note">the only clock that matters to the person on the phone</div>
+          </div>
+        </div>
+
+        <div class="verdict" id="verdict2"></div>
+      </div>
+    </div>
+
+    <h3>Who decides what, in order</h3>
+    <p>
+      The model is not stripped of its role. It keeps the one job it is well positioned for, noticing
+      that speech started. Everything downstream of that signal belongs to the relay.
+    </p>
+
+    <figure class="fig">
+      <svg viewBox="0 0 820 384" role="img" width="820" height="384"
+           aria-label="Sequence diagram across three lifelines: browser, relay, and OpenAI. OpenAI sends speech_started to the relay. The relay sends response.cancel to OpenAI only if generating, sends interrupted to the browser always, receives played-ms back, then sends conversation.item.truncate to OpenAI.">
+        <defs>
+          <marker id="sq" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <polygon points="0,0 10,5 0,10" fill="currentColor"/>
+          </marker>
+          <marker id="sq-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <polygon points="0,0 10,5 0,10" fill="var(--accent)"/>
+          </marker>
+        </defs>
+
+        <!-- lifeline heads -->
+        <rect x="46" y="12" width="168" height="34" rx="4" fill="none" stroke="currentColor" stroke-width="1.5"/>
+        <text x="130" y="34" text-anchor="middle" font-size="12" font-weight="600" fill="currentColor">Browser</text>
+
+        <rect x="318" y="12" width="184" height="34" rx="4" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1.5"/>
+        <text x="410" y="34" text-anchor="middle" font-size="12" font-weight="600" fill="currentColor">Relay</text>
+
+        <rect x="602" y="12" width="176" height="34" rx="4" fill="none" stroke="currentColor" stroke-width="1.5"/>
+        <text x="690" y="34" text-anchor="middle" font-size="12" font-weight="600" fill="currentColor">OpenAI</text>
+
+        <!-- lifelines -->
+        <line x1="130" y1="46" x2="130" y2="352" stroke="currentColor" stroke-width="1" stroke-dasharray="3 4" opacity="0.5"/>
+        <line x1="410" y1="46" x2="410" y2="352" stroke="var(--accent)" stroke-width="1.5" opacity="0.6"/>
+        <line x1="690" y1="46" x2="690" y2="352" stroke="currentColor" stroke-width="1" stroke-dasharray="3 4" opacity="0.5"/>
+
+        <!-- 1: detection -->
+        <text x="550" y="80" text-anchor="middle" font-size="11" fill="currentColor">1 · input_audio_buffer.speech_started</text>
+        <text x="550" y="94" text-anchor="middle" font-size="10" fill="currentColor" opacity="0.65">detection: the one job left with the model</text>
+        <line x1="690" y1="104" x2="416" y2="104" stroke="currentColor" stroke-width="1.5" marker-end="url(#sq)"/>
+
+        <!-- decision marker -->
+        <rect x="330" y="118" width="160" height="30" rx="3" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1.5"/>
+        <text x="410" y="137" text-anchor="middle" font-size="11" font-weight="600" fill="currentColor">the decision happens here</text>
+
+        <!-- 2 -->
+        <text x="552" y="176" text-anchor="middle" font-size="11" fill="currentColor">2 · response.cancel</text>
+        <text x="552" y="190" text-anchor="middle" font-size="10" fill="currentColor" opacity="0.65">only if a response is still generating</text>
+        <line x1="410" y1="200" x2="684" y2="200" stroke="currentColor" stroke-width="1.5" marker-end="url(#sq)"/>
+
+        <!-- 3 -->
+        <text x="270" y="228" text-anchor="middle" font-size="11" fill="var(--accent)" font-weight="600">3 · interrupted</text>
+        <text x="270" y="242" text-anchor="middle" font-size="10" fill="currentColor" opacity="0.65">always, whatever the generation state</text>
+        <line x1="410" y1="252" x2="136" y2="252" stroke="var(--accent)" stroke-width="2" marker-end="url(#sq-a)"/>
+
+        <!-- 4 -->
+        <text x="270" y="280" text-anchor="middle" font-size="11" fill="var(--accent)" font-weight="600">4 · played-ms: 1840</text>
+        <text x="270" y="294" text-anchor="middle" font-size="10" fill="currentColor" opacity="0.65">only the browser knows this number</text>
+        <line x1="130" y1="304" x2="404" y2="304" stroke="var(--accent)" stroke-width="2" marker-end="url(#sq-a)"/>
+
+        <!-- 5 -->
+        <text x="552" y="332" text-anchor="middle" font-size="11" fill="currentColor">5 · conversation.item.truncate(audio_end_ms: 1840)</text>
+        <line x1="410" y1="344" x2="684" y2="344" stroke="currentColor" stroke-width="1.5" marker-end="url(#sq)"/>
+      </svg>
+      <figcaption>
+        The model detects. The relay decides. Steps 3 and 4 are the round trip that makes step 5
+        possible: the server cannot know how much audio reached a speaker, so it asks.
+      </figcaption>
+    </figure>
+
+    <p>
+      Steps 2 and 3 of that diagram, as they actually run — cancel <em>only</em> if a response is
+      still generating, but tell the browser to stop <em>unconditionally</em>, because generation
+      finishing tells you nothing about whether the caller is still hearing it:
+    </p>
+
+    <div class="src-tag">poc/apps/be/src/relay/relay.ts — handleUpstreamEvent(), abridged</div>
+<pre>if (type === "input_audio_buffer.speech_started") {
+  <span class="cmt">// Cancel upstream ONLY if the model is still generating. Cancelling a
+  // finished response is what produced "response_cancel_not_active".</span>
+  if (this.responseInFlight) {
+    this.upstream?.cancelResponse();
+    this.responseInFlight = false;
+    if (this.currentResponseId) this.cancelledResponses.add(this.currentResponseId);
+  }
+
+  <span class="cmt">// Tell the browser to stop playback regardless of whether generation
+  // finished. Gating this on responseInFlight meant that for most of the
+  // audible response a barge-in did nothing at all.</span>
+  this.pendingTruncateItemId = this.currentItemId;
+  this.toBrowser({ type: "interrupted" });
+  this.toBrowser({ type: "turn-state", assistantSpeaking: false });
+}</pre>
+
+    <h3>Why truncation is not optional</h3>
+    <p>
+      Cancelling stops the model generating more. It does not correct what the model
+      <em>believes it already said</em>. Left alone, the session history contains the full sentence,
+      so later in the call the bot will reference something the caller never heard, with complete
+      confidence.
+    </p>
+    <p>
+      So step 5 rewrites history to match reality: <code>conversation.item.truncate</code> with
+      <code>audio_end_ms</code> set to the number the browser reported. The model's record now ends
+      where the caller's ears did.
+    </p>
+
+    <div class="src-tag">poc/apps/be/src/relay/relay.ts — case "played-ms", abridged</div>
+<pre>const itemId = this.pendingTruncateItemId;
+this.pendingTruncateItemId = null;
+const heardMs = Math.max(0, Math.round(msg.ms));
+if (!itemId || heardMs === 0) break;  <span class="cmt">// nothing was playing — not a barge-in</span>
+
+this.upstream?.send({
+  type: "conversation.item.truncate",
+  item_id: itemId,
+  content_index: 0,
+  audio_end_ms: heardMs,
+});
+this.audit({
+  authority: "index-only",
+  kind: "note",
+  summary: `Caller barged in — playback stopped and history truncated to ${heardMs} ms`,
+});</pre>
+
+    <div class="callout">
+      <span class="tag">Two details that were real bugs</span>
+      <p>
+        <strong>Stale audio already on the wire.</strong> Cancelling upstream does not recall frames
+        already sent. Without dropping deltas belonging to a cancelled response, a burst of audio
+        plays <em>after</em> the interruption and undoes it. The relay tracks cancelled response ids
+        and discards their audio.
+      </p>
+      <p>
+        <strong>The truncate target must be a message item.</strong> A response often emits a
+        <code>function_call</code> item first, which carries no audio. Naming that as the truncate
+        target returns <code>Only model output audio messages can be truncated</code>.
+      </p>
+    </div>
+
+    <h3>Zero milliseconds is not a barge-in</h3>
+    <p>
+      One more piece of judgement the relay keeps for itself. <code>speech_started</code> fires
+      whenever the caller talks, including when the bot is silent and they are simply taking their
+      turn. The relay cannot tell those apart, so it does not try. It asks the browser, and if the
+      answer is <code>played-ms: 0</code>, nothing was playing, nothing gets truncated, and nothing
+      is logged as an interruption. The distinction is drawn from evidence rather than guessed at.
+    </p>
+
+    <p>
+      That number comes from the browser's own scheduling clock, not a guess or a timer race. If
+      the last scheduled buffer already ended before now, nothing was playing, full stop:
+    </p>
+
+    <div class="src-tag">poc/apps/fe/src/lib/audio-player.ts — AudioPlayer, abridged</div>
+<pre>interrupt(): number {
+  <span class="cmt">// `cursor` is the context-clock time the last scheduled buffer ends —
+  // an exact, synchronous answer to "is audio still playing?", unlike
+  // the `scheduled` array, which is pruned a tick late by onended.</span>
+  const stillPlaying = this.ctx !== null && this.cursor > this.ctx.currentTime;
+  const played = stillPlaying ? this.playedMs() : 0;
+
+  for (const source of this.scheduled) {
+    try { source.stop(); } catch { <span class="cmt">/* already stopped — fine */</span> }
+  }
+  this.scheduled = [];
+  <span class="k">return played;</span>  <span class="cmt">// 0 here is what tells the relay "not a barge-in"</span>
+}</pre>
+
+    <div class="disclaimer">
+      <div class="disclaimer-head">
+        <span class="marker">Disclaimer</span>
+        What a real implementation has to change
+      </div>
+      <div class="body">
+        <div class="scroll-x">
+          <table>
+            <thead>
+              <tr><th>In the POC</th><th>In production</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>"The caller" is a browser tab with a clean microphone at 24&nbsp;kHz.</td>
+                <td>A real SIP leg at 8&nbsp;kHz, with line noise, echo, and a codec. Detection sensitivity tuned against a clean mic will not transfer unchanged.</td>
+              </tr>
+              <tr>
+                <td>The browser measures playback and reports <code>played-ms</code>.</td>
+                <td>Whatever terminates the media, an SBC or media bridge, has to measure and report the same number. The mechanism depends on that component existing and being honest about it.</td>
+              </tr>
+              <tr>
+                <td>Detection sensitivity is OpenAI's default server VAD, unchanged.</td>
+                <td>The point of owning the decision is to vary it by moment, raising the bar during a critical read-back. That per-moment threshold is <strong>designed but not built here</strong>: today every <code>speech_started</code> is treated identically.</td>
+              </tr>
+              <tr>
+                <td>Latency is localhost. No network between components.</td>
+                <td>Every hop in the loop above adds delay, and the loop has to close faster than a caller notices. That budget can only be measured in their environment.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p class="open-q">
+          <b>The honest limit:</b> we do not have benchmarked interruption numbers at their call
+          volume. The architecture is sound and the mechanism is real running code, but the
+          sensitivity tuning, how aggressive versus how forgiving, needs testing against their own
+          recorded call audio. That is a measurement job, not a design job.
+        </p>
+      </div>
+    </div>
+
+  </section>
+
+  <section class="q" id="q3">
+    <div class="q-head"><span class="q-num">Q3</span><h2>Handing off to a human</h2></div>
+
+    <h3>The bar for success is narrower than it sounds</h3>
+    <p>
+      This is easy to over-engineer, so it is worth naming the actual bar first: a handoff feels
+      broken at exactly one moment, when the human agent asks the caller for something the bot
+      already has. Everything below exists to make that moment structurally impossible, not to
+      build a bigger summary.
+    </p>
+    <p>
+      It shares Q1's whole architecture. The orchestrator holds state; here the receiving end is a
+      human's screen instead of another AI session. If Q1's answer is already built, Q3 is mostly
+      that same state read out for a different audience.
+    </p>
+
+    <h3>Two triggers, both deterministic, watch the handoffFired latch</h3>
+    <p>
+      Neither trigger below is inferred from tone or from the model deciding the call "seems" stuck.
+      Both are plain conditions on CallState, checked the same way every time.
+    </p>
+
+    <div class="machine">
+      <div class="machine-bar">
+        <span class="label">Two triggers</span>
+        <button class="step" id="p3" type="button">Back</button>
+        <button class="step primary" id="n3" type="button">Step forward</button>
+        <button class="step" id="r3" type="button">Reset</button>
+      </div>
+
+      <div class="stage">
+        <p class="caption" id="cap3">
+          A call is mid-capture. Two independent paths can fire a handoff. Watch the latch on the
+          right — it is what stops a call from ever handing off twice.
+        </p>
+
+        <div class="trig-grid">
+          <div class="trig" id="trigA">
+            <div class="trig-title">Trigger A · caller-request</div>
+            <div class="trig-body" id="trigAbody">the caller says "let me talk to a person"</div>
+          </div>
+          <div class="trig" id="trigB">
+            <div class="trig-title">Trigger B · tiers-exhausted</div>
+            <div class="trig-body" id="trigBbody">Tier 3 (keypad) also fails to validate</div>
+          </div>
+        </div>
+
+        <p class="flow" id="flow3">↓ &nbsp; fireHandoff(reason, state) &nbsp; ↓</p>
+
+        <div class="latch" id="latch3">
+          <div class="latch-title">handoffFired</div>
+          <div class="latch-box" id="latchbox">false</div>
+          <div class="latch-note" id="latchnote">a second trigger on this call is a no-op from here on</div>
+        </div>
+      </div>
+    </div>
+
+    <p>
+      That latch is not decoration. Before it existed, a tier-exhausted handoff could fire, and then
+      the model would <em>separately</em> call <code>request_handoff</code> on the very next turn,
+      silently overwriting <code>tiers-exhausted</code> with <code>caller-request</code>, the correct
+      reason replaced by an incorrect one. A call now hands off at most once, whichever reason got
+      there first.
+    </p>
+
+    <h3>What actually gets handed over</h3>
+    <p>
+      Reading the code is more convincing than describing it, so here is the real assembly, not a
+      paraphrase. Everything on the right already existed before the handoff, this function computes
+      nothing new:
+    </p>
+
+<pre>buildHandoffPacket(state, reason) {
+  <span class="cmt">// deterministic template — never model-generated</span>
+  summary: [
+    `Caller was providing ${state.field}.`,
+    `Reached Tier ${state.tier} (${TIER_LABEL[state.tier]}).`,
+    state.confirmationState === "confirmed"
+      ? `${state.validatedValue} was validated and verbally confirmed.`
+      : `${state.validatedValue} was validated but <span class="k">NOT yet verbally confirmed</span> — confirm before acting on it.`,
+    REASON_LABEL[reason],
+  ].join(" "),
+
+  matchedRecord:   findPolicy(state.validatedValue),   <span class="cmt">// from Q5's ladder</span>
+  auditEntryCount: getAudit(state.callId).length,       <span class="cmt">// from Q6's log</span>
+  audioAvailable:  isRecordingEnabled(state.callId),    <span class="cmt">// from Q6's toggle</span>
+}</pre>
+
+    <p>
+      Notice the confirmed-versus-not branch again, the same distinction Q1's reseed cared about.
+      A value that is <em>validated but not confirmed</em> is a materially different thing to hand a
+      human than one the caller has verbally agreed to, and the template says so explicitly rather
+      than collapsing both into "captured".
+    </p>
+
+    <h3>Delivery is a platform question, not a data question</h3>
+    <p>
+      The packet above is delivery-agnostic on purpose. How it actually reaches a human depends
+      entirely on what is on the other end, and there are three real shapes this takes:
+    </p>
+
+    <figure class="fig">
+      <svg viewBox="0 0 860 300" role="img" width="860" height="300"
+           aria-label="Three delivery mechanisms fan out from the handoff packet: screen-pop attaches it to the call record, SIP transfer passes only a small reference id, and whisper transfer speaks a short summary to the agent before connecting. Only screen-pop is built in this POC.">
+        <defs>
+          <marker id="q3ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <polygon points="0,0 10,5 0,10" fill="currentColor"/>
+          </marker>
+          <marker id="q3ar-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <polygon points="0,0 10,5 0,10" fill="var(--accent)"/>
+          </marker>
+        </defs>
+
+        <rect x="20" y="118" width="190" height="64" rx="4" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1.5"/>
+        <text x="115" y="144" text-anchor="middle" font-size="12" font-weight="600" fill="currentColor">HandoffPacket</text>
+        <text x="115" y="162" text-anchor="middle" font-size="10" fill="currentColor" opacity="0.75">summary · captured value · audit count</text>
+
+        <line x1="210" y1="150" x2="288" y2="52" stroke="var(--accent)" stroke-width="2" marker-end="url(#q3ar-a)"/>
+        <line x1="210" y1="150" x2="288" y2="150" stroke="currentColor" stroke-width="1.5" marker-end="url(#q3ar)"/>
+        <line x1="210" y1="150" x2="288" y2="248" stroke="currentColor" stroke-width="1.5" marker-end="url(#q3ar)"/>
+
+        <rect x="296" y="20" width="230" height="66" rx="4" fill="var(--live-soft)" stroke="var(--live)" stroke-width="1.5"/>
+        <text x="411" y="46" text-anchor="middle" font-size="12" font-weight="600" fill="currentColor">Screen-pop</text>
+        <text x="411" y="63" text-anchor="middle" font-size="10" fill="currentColor" opacity="0.75">full packet attached to the call record</text>
+        <text x="411" y="78" text-anchor="middle" font-size="9.5" font-weight="600" fill="var(--live)">built — this demo's page IS the pop</text>
+
+        <rect x="296" y="118" width="230" height="64" rx="4" fill="none" stroke="currentColor" stroke-width="1.5"/>
+        <text x="411" y="144" text-anchor="middle" font-size="12" font-weight="600" fill="currentColor">SIP transfer</text>
+        <text x="411" y="162" text-anchor="middle" font-size="10" fill="currentColor" opacity="0.75">carries a small reference id only</text>
+
+        <rect x="296" y="216" width="230" height="64" rx="4" fill="none" stroke="currentColor" stroke-width="1.5"/>
+        <text x="411" y="242" text-anchor="middle" font-size="12" font-weight="600" fill="currentColor">Whisper transfer</text>
+        <text x="411" y="260" text-anchor="middle" font-size="10" fill="currentColor" opacity="0.75">short spoken summary to the agent</text>
+
+        <path d="M 526 150 C 590 150, 590 150, 654 150" fill="none" stroke="currentColor" stroke-width="1.5" stroke-dasharray="4 4" marker-end="url(#q3ar)"/>
+        <text x="590" y="140" text-anchor="middle" font-size="10" fill="currentColor" opacity="0.65">lookup by id</text>
+
+        <rect x="662" y="120" width="176" height="60" rx="4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-dasharray="3 3"/>
+        <text x="750" y="146" text-anchor="middle" font-size="11" fill="currentColor">receiving system</text>
+        <text x="750" y="163" text-anchor="middle" font-size="10" fill="currentColor" opacity="0.7">looks up full context</text>
+      </svg>
+      <figcaption>
+        Three real delivery shapes, chosen by what the receiving platform actually supports. Only
+        screen-pop is built here — this page stands in for the pop itself, not a simulation of one.
+      </figcaption>
+    </figure>
+
+    <p>
+      SIP headers are not built to carry a summary, so that path deliberately passes only a
+      reference id and leaves the lookup to the receiving system. Whisper transfer trades the visual
+      packet for a few spoken sentences played to the agent alone before the caller connects. None of
+      the three is more "correct"; each is the answer to a different platform's constraint.
+    </p>
+
+    <div class="disclaimer">
+      <div class="disclaimer-head">
+        <span class="marker">Disclaimer</span>
+        What a real implementation has to change
+      </div>
+      <div class="body">
+        <div class="scroll-x">
+          <table>
+            <thead>
+              <tr><th>In the POC</th><th>In production</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>The "agent screen" is this page in the browser.</td>
+                <td>There is no contact-centre platform here to receive anything. The trigger, the packet, and its contents are real and live; the last hop, an actual screen-pop, SIP transfer, or whisper, is entirely unbuilt.</td>
+              </tr>
+              <tr>
+                <td>The bridging line to the caller ("connecting you to someone who can help") is spoken by the same demo bot.</td>
+                <td>Real, and this part transfers directly, no platform dependency. Worth keeping regardless of which delivery mechanism is chosen: a silent handoff still feels like the call dropped.</td>
+              </tr>
+              <tr>
+                <td><code>audioAvailable</code> reflects whether the "Record this call" toggle was on.</td>
+                <td>Correct behaviour, not a gap, but worth being precise about out loud: it means the recording <em>will exist</em> once the call ends, not that it exists yet at the instant of handoff.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p class="open-q">
+          <b>The open question worth asking back:</b> which contact-centre platform actually
+          receives these transfers, and does it support attaching custom data to a call record? That
+          single fact decides whether this is "attach some metadata" or "stand up a lookup service."
+        </p>
+      </div>
+    </div>
+
+  </section>
+
+  <section class="q" id="q4">
+    <div class="q-head"><span class="q-num">Q4</span><h2>Grounding in a knowledge base</h2></div>
+
+    <h3>Not a binary, three techniques layered</h3>
+    <p>
+      Framed as "fetch before the model responds, or let it call a tool", but the production answer
+      layers three things. Tool-calling is the default, most turns need no lookup at all. Preload the
+      hot facts into session instructions for zero-latency answers to the common questions. And cover
+      whatever latency remains with speech, "let me check that for you," said immediately while the
+      lookup runs, because voice has no typing indicator and silence just sounds like the call
+      hung.
+    </p>
+    <p>
+      That third piece is a recommendation, not something built here, flagged plainly in the
+      disclaimer below. What <em>is</em> built, and worth going under the hood on, is the tool call
+      itself: a real deterministic search, not an API mock.
+    </p>
+
+    <h3>Why keyword search, not embeddings</h3>
+    <p>
+      This is a deliberate choice worth being able to defend, because "why not just use embeddings"
+      is a fair question to get asked. Q4's actual claim is that the model never answers from its own
+      training, it only ever repeats back what the search returns. A similarity score from an opaque
+      embedding model would not break that claim, but it would make it <strong>unverifiable</strong>,
+      you would be trusting a second black box instead of the first one. A keyword match with a
+      visible score is checkable by anyone reading the payload.
+    </p>
+
+    <h3>The regression, live</h3>
+    <p>
+      This is the single most fragile test in the suite, and the reason is worth seeing mechanically
+      rather than taking on faith. Step through what "what is the capital of France" actually does to
+      the search.
+    </p>
+
+    <div class="machine">
+      <div class="machine-bar">
+        <span class="label">Anchor-gated search</span>
+        <button class="step" id="p4" type="button">Back</button>
+        <button class="step primary" id="n4" type="button">Step forward</button>
+        <button class="step" id="r4" type="button">Reset</button>
+      </div>
+
+      <div class="stage">
+        <p class="caption" id="cap4">
+          A caller asks something the knowledge base has nothing to do with. Watch what a naive
+          tokenizer does with the word "the".
+        </p>
+
+        <div class="q4-query" id="q4query">"What is the capital of France?"</div>
+
+        <div class="q4-tokens" id="q4tokens"></div>
+
+        <div class="q4-article" id="q4article">
+          <div class="q4a-title">kb-grace-period · Grace period for premium payments</div>
+          <div class="q4a-row">
+            <span class="q4a-label">anchor (title + keywords)</span>
+            <span class="q4a-cells" id="q4anchor"></span>
+          </div>
+          <div class="q4a-row">
+            <span class="q4a-label">body (article content)</span>
+            <span class="q4a-cells" id="q4body">…"payment is not received by <mark id="q4bodyhit">the</mark> policy lapses"…</span>
+          </div>
+        </div>
+
+        <div class="verdict" id="verdict4"></div>
+      </div>
+    </div>
+
+    <p>
+      Two independent defenses are doing work here, and the bug only fully dies when both exist.
+      <strong>Stopwords</strong> stop "the" from ever becoming a query token in the first place. The
+      <strong>anchor gate</strong>, requiring at least one hit against an article's title or
+      hand-written keywords before its body text can even be considered, means that even a token
+      that slips past the stopword list cannot qualify an article on body text alone. Body text only
+      re-ranks between articles that already qualified through the anchor.
+    </p>
+
+    <p>
+      Contrast that with a question the knowledge base actually answers. <em>"What's the grace
+      period if I pay late?"</em> tokenizes to <code>grace, period, pay, late</code>. Against the
+      same article, <code>grace</code> and <code>period</code> and <code>late</code> all hit the
+      anchor directly, <code>pay</code> matches nothing exactly, because the keyword is "late
+      payment," not "pay". <strong>anchorHits: 3</strong>, comfortably over the gate, and this time
+      correctly grounded.
+    </p>
+
+    <h3>What the model is actually handed</h3>
+    <p>
+      Same guardrail shape as everywhere else in this build: a status, and either the exact source
+      content or an explicit instruction to admit it does not know. Never a paraphrase the model
+      could drift from, never silent permission to fill a gap from its own training.
+    </p>
+
+<pre><span class="cmt">// grounded — the model gets the real article, not a summary of it</span>
+{
+  <span class="k">"status"</span>: "grounded",
+  <span class="k">"articles"</span>: [{ "title": "Grace period for premium payments", "content": "…" }],
+  <span class="k">"instruction"</span>: "Answer using only the content above, in your own words, and
+                mention which topic it's from."
+}
+
+<span class="cmt">// no_match — nothing to draw on, and the instruction says so plainly</span>
+{
+  <span class="k">"status"</span>: "no_match",
+  <span class="k">"instruction"</span>: "Say plainly that you don't have that information on file,
+                and offer to have someone follow up. Do not guess."
+}</pre>
+
+    <p>
+      The pre-speech guard from Q3's audit trail shows up here too, unchanged in shape: a search
+      fired before the caller has said anything gets discarded the same way a premature capture does,
+      same root cause, same shared fix, applied twice rather than duplicated.
+    </p>
+
+    <div class="disclaimer">
+      <div class="disclaimer-head">
+        <span class="marker">Disclaimer</span>
+        What a real implementation has to change
+      </div>
+      <div class="body">
+        <div class="scroll-x">
+          <table>
+            <thead>
+              <tr><th>In the POC</th><th>In production</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Five articles, hand-written keywords per article.</td>
+                <td>A real knowledge base is hundreds or thousands of articles. Keyword search with hand-curated anchors does not scale to that volume without real retrieval infrastructure, and the honest answer here is architecture, not a benchmarked number.</td>
+              </tr>
+              <tr>
+                <td>The filler line, "let me check that for you," is a recommendation in this document.</td>
+                <td><strong>Not engineered anywhere in the code.</strong> Nothing instructs the model to say it before calling the tool, and nothing in the relay injects it. If the model says something like it, that is emergent behaviour, not a guarantee this build makes.</td>
+              </tr>
+              <tr>
+                <td>Retrieval runs on localhost, effectively instant.</td>
+                <td>Real latency depends entirely on the retrieval backend and network path. Not something to assert in advance, it needs measuring in their environment.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </section>
+
+  <section class="q" id="q5">
+    <div class="q-head"><span class="q-num">Q5</span><h2>Capturing structured and alphanumeric values</h2></div>
+
+    <p>
+      This is the core of the whole build. Every other question's page is a view onto machinery
+      this one exercises, the audit trail (Q6) is watching this ladder run, the guardrails (Q7)
+      are this ladder's payloads inspected, the barge-in demo (Q2) interrupts this ladder mid-read-back.
+      Worth the most depth, because it is the part most likely to get a genuinely technical
+      follow-up question.
+    </p>
+
+    <div class="callout">
+      <span class="tag">The fact worth having ready</span>
+      <p>
+        "So just fix the codec" is a fair question to expect, and the honest answer routes through a
+        distinction, not a single explanation. <strong>Stop consonants</strong> (B/P, D/T) and
+        <strong>sibilants</strong> (S/F/X) are confused because 8&nbsp;kHz genuinely discards the
+        high-frequency detail that separates them. Wideband audio fixes both classes.
+      </p>
+      <p>
+        It does <strong>not</strong> fix <strong>nasals</strong> (M/N). Nasals live in low
+        frequencies a narrowband line carries fine, they get confused because the mouth shape
+        producing them is nearly identical, a fundamentally different mechanism that survives a
+        codec upgrade untouched. That is why NATO disambiguation earns a permanent place in the
+        design even in a hypothetical wideband future, not just a workaround for today's phone
+        lines.
+      </p>
+    </div>
+
+    <h3>The ladder, running for real</h3>
+    <p>
+      Cheapest check first is not a principle stated in a comment, it is the literal control flow.
+      Watch the lookup step specifically, on a bad-format value it never runs at all.
+    </p>
+
+    <div class="machine">
+      <div class="machine-bar">
+        <span class="label">runValidationLadder</span>
+        <button class="step" id="p5" type="button">Back</button>
+        <button class="step primary" id="n5" type="button">Step forward</button>
+        <button class="step" id="r5" type="button">Reset</button>
+      </div>
+
+      <div class="stage">
+        <p class="caption" id="cap5">Three real attempts, in the order a caller might actually produce them.</p>
+
+        <div class="q4-query" id="q5input">"banana banana banana"</div>
+
+        <div class="ladder5">
+          <div class="l5step" id="l5normalize">
+            <span class="l5name">0 · normalize</span>
+            <span class="l5icon" id="l5normicon">–</span>
+            <span class="l5detail" id="l5normdetail">trim, uppercase, strip spaces</span>
+          </div>
+          <div class="l5step" id="l5regex">
+            <span class="l5name">1 · regex</span>
+            <span class="l5icon" id="l5regexicon">–</span>
+            <span class="l5detail" id="l5regexdetail">^[A-Z]{2}\d{3}[A-Z]$</span>
+          </div>
+          <div class="l5step" id="l5lookup">
+            <span class="l5name">2 · lookup</span>
+            <span class="l5icon" id="l5lookupicon">–</span>
+            <span class="l5detail" id="l5lookupdetail">a real database read — the only step with a network cost</span>
+          </div>
+        </div>
+
+        <div class="verdict" id="verdict5"></div>
+      </div>
+    </div>
+
+    <h3>Escalation, the whole function</h3>
+    <p>
+      This is genuinely the entire escalation policy, no retry counter, no patience threshold, no
+      sentiment score anywhere in it. One failed attempt is sufficient, and there is nowhere further
+      to go past 3 today:
+    </p>
+
+<pre>function nextTierFor(valid: boolean, tier: Tier): Tier {
+  if (valid) return tier;        <span class="cmt">// success never moves the tier</span>
+  if (tier === 1) return 2;      <span class="cmt">// one failure is enough</span>
+  if (tier === 2) return 3;
+  return tier;                   <span class="cmt">// Tier 4 (SMS/web) isn't built — see disclaimer</span>
+}</pre>
+
+    <p>
+      That is the argument for "escalation is silent, never a confession of failure" made concrete:
+      there is no counter to consult, no threshold to tune. A single deterministic branch, and the
+      caller never hears "sorry, I didn't get that", the bot just starts asking for spelling.
+    </p>
+
+    <h3>Tier 3: a real state machine, not a lookup table</h3>
+    <p>
+      Multi-tap decoding needs to track more than "which key was pressed". The same key pressed
+      twice quickly means one letter cycling; the same key pressed twice with a pause means two
+      separate letters. That distinction needs a timer, not just a keypress handler.
+    </p>
+
+    <div class="machine">
+      <div class="machine-bar">
+        <span class="label">Tap decoding, key "2" → B</span>
+        <button class="step" id="p5b" type="button">Back</button>
+        <button class="step primary" id="n5b" type="button">Step forward</button>
+        <button class="step" id="r5b" type="button">Reset</button>
+      </div>
+      <div class="stage">
+        <p class="caption" id="cap5b">
+          Entering "B" needs the 2nd letter on key 2, which means three taps on the same key.
+        </p>
+        <div class="tap-row">
+          <div class="tap-key" id="tapkey">2</div>
+          <div class="tap-cycle">
+            <span class="tap-opt" data-i="0">2</span>
+            <span class="tap-opt" data-i="1">A</span>
+            <span class="tap-opt" data-i="2">B</span>
+            <span class="tap-opt" data-i="3">C</span>
+          </div>
+          <div class="tap-buffer">buffer: "<span id="tapbuffer"></span><span class="tap-pending" id="tappending"></span>"</div>
+        </div>
+        <div class="verdict" id="verdict5b"></div>
+      </div>
+    </div>
+
+    <p>
+      That 1200&nbsp;ms window is what a real handset gives you for free, muscle memory built from
+      years of texting. This is that same convention rebuilt from a keypress handler and a timer,
+      not a metaphor for it, the caller who already knows how to text on a flip phone already knows
+      how to use this.
+    </p>
+
+    <div class="disclaimer">
+      <div class="disclaimer-head">
+        <span class="marker">Disclaimer</span>
+        What a real implementation has to change
+      </div>
+      <div class="body">
+        <div class="scroll-x">
+          <table>
+            <thead>
+              <tr><th>In the POC</th><th>In production</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Tiers 1 through 3 are built and running.</td>
+                <td><strong>Tier 4 does not exist.</strong> Confirmed directly in <code>nextTierFor()</code>'s own comment. A Tier 3 failure today routes to a human handoff (Q3), not to an SMS link.</td>
+              </tr>
+              <tr>
+                <td>Every field enters the ladder at Tier 1 speech, regardless of type.</td>
+                <td>The recommended pattern, pure numbers straight to DTMF, symbol-heavy fields straight to a link, is <strong>not built as routing logic</strong>. Nothing today inspects field type and skips a tier.</td>
+              </tr>
+              <tr>
+                <td>The checksum step is defined in the type system and documented in the ladder's own comment.</td>
+                <td>It never actually fires, this demo's policy ID format carries no check digit. Real machinery waiting for a format that needs it, not something a demo will ever show running.</td>
+              </tr>
+              <tr>
+                <td>The keypad is mouse clicks in a browser.</td>
+                <td>Not real DTMF tones over a phone line. The tap-count decode logic itself is real and reusable, what generates the input is not.</td>
+              </tr>
+              <tr>
+                <td>The 8&nbsp;kHz toggle does a genuine decimate-and-restore on the audio.</td>
+                <td>Real signal degradation, not a cosmetic flag, but the code's own comment is honest that it skips an anti-aliasing filter before decimating. Close enough that a real phone line's effect is still probabilistic, not guaranteed, on any single utterance.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </section>
+
+  <section class="q" id="q6">
+    <div class="q-head"><span class="q-num">Q6</span><h2>Knowing what the model actually heard</h2></div>
+
+    <p>
+      Worth conceding plainly before anything else, because it buys the authority to be firm on
+      everything that follows: this is a real architectural gap, not a misconfiguration. A
+      speech-to-speech model does not hand you a text record of what it understood. Teams run a
+      separate transcription, often a different model, on the same audio, and now two systems that
+      both listened may disagree about what happened.
+    </p>
+    <p>
+      The fix is not a setting. It is refusing to let every record be treated the same way.
+    </p>
+
+    <h3>Enforcement, not a taxonomy</h3>
+    <p>
+      The three classes below are not a policy written in a doc that people are supposed to
+      remember. They are a TypeScript field with no default value:
+    </p>
+
+<pre>export interface WriteAuditInput {
+  callId: string;
+  authority: RecordAuthority;   <span class="cmt">// required — no default anywhere</span>
+  kind: AuditEntry["kind"];
+  summary: string;
+  payload?: unknown;
+}</pre>
+
+    <p>
+      Every single call to <code>writeAudit()</code>, and there are more than a dozen of them across
+      the codebase, must state which class the entry belongs to. Omitting it is not a runtime
+      warning, it does not compile. That is the actual mechanism behind "the mistake cannot happen
+      silently", not a reviewer's discipline, a type the compiler refuses to accept incomplete.
+    </p>
+
+    <div class="q4-article" style="margin-top: 1rem;">
+      <div class="q4a-row"><span class="q4a-label" style="width:8.5rem">ground-truth</span><span class="q4a-cells">raw audio / keypresses — <span class="hit">the only class that can settle a dispute</span></span></div>
+      <div class="q4a-row"><span class="q4a-label" style="width:8.5rem">authoritative</span><span class="q4a-cells">tool-call arguments — the model's own structured understanding, no second listener</span></div>
+      <div class="q4a-row"><span class="q4a-label" style="width:8.5rem">index-only</span><span class="q4a-cells">a separate transcript — useful to find a moment, <span class="hit" style="color:var(--dead)">never evidence</span></span></div>
+    </div>
+
+    <h3>The toggle, under the hood</h3>
+    <p>
+      Ground truth used to mean, in this build, only DTMF keypresses, a real signal, but a narrow
+      one. Raw audio is now genuinely captured, opt-in, off by default. Watch what "off" actually
+      means at the point of writing, not at the UI layer.
+    </p>
+
+    <div class="machine">
+      <div class="machine-bar">
+        <span class="label">persistAuditEntry(), two calls</span>
+        <button class="step" id="p6" type="button">Back</button>
+        <button class="step primary" id="n6" type="button">Step forward</button>
+        <button class="step" id="r6" type="button">Reset</button>
+      </div>
+
+      <div class="stage">
+        <p class="caption" id="cap6">
+          Two identical calls, differing in one respect: whether "Record this call" was checked
+          before Start.
+        </p>
+
+        <div class="sessions">
+          <div class="sess" id="callA">
+            <div class="sess-title">Call A <span class="dot" id="callAdot">Record this call: off</span></div>
+            <div class="sess-sub">the default</div>
+            <div class="mem" id="callAmem"></div>
+          </div>
+          <div class="sess" id="callB">
+            <div class="sess-title">Call B <span class="dot" id="callBdot">Record this call: on</span></div>
+            <div class="sess-sub">opted in before Start</div>
+            <div class="mem" id="callBmem"></div>
+          </div>
+        </div>
+
+        <div class="verdict" id="verdict6"></div>
+      </div>
+    </div>
+
+    <p>
+      The gate is not a UI-layer filter hiding a folder that exists anyway. It sits inside
+      <code>persistAuditEntry()</code> and <code>persistCallState()</code> themselves:
+      <code>if (!isRecordingEnabled(callId)) return;</code>, before <code>ensureCallDir()</code>
+      even runs. For a call with the toggle off, no directory is ever created, this was verified
+      directly against the real filesystem, not assumed from reading the code.
+    </p>
+
+    <div class="callout">
+      <span class="tag">Why the cache still gets everything</span>
+      <p>
+        The in-memory cache in <code>audit-store.ts</code> is written unconditionally, regardless of
+        the toggle, that is what the live wire log the browser watches during a call is reading from.
+        Only the durable copy on disk is gated. The toggle decides whether the record survives the
+        call, not whether the call has a live audit trail while it is happening.
+      </p>
+    </div>
+
+    <h3>The free audit trail nobody has to build</h3>
+    <p>
+      One more thing worth having ready, because it costs nothing extra: a spoken confirmation is
+      itself evidence. "Your policy ID is B-N-7-4-2-D, is that right?" followed by "yes", recorded,
+      is a validated record on its own. No transcription model, no extra infrastructure, it already
+      exists the moment Q5's read-back happens.
+    </p>
+
+    <div class="disclaimer">
+      <div class="disclaimer-head">
+        <span class="marker">Disclaimer</span>
+        What a real implementation has to change
+      </div>
+      <div class="body">
+        <div class="scroll-x">
+          <table>
+            <thead>
+              <tr><th>In the POC</th><th>In production</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Recording is off by default, so a call with it off has nothing on disk afterward.</td>
+                <td>Correct behaviour, not a gap, worth being precise about out loud so it does not read as an oversight when someone opens an old call's folder and finds nothing there.</td>
+              </tr>
+              <tr>
+                <td>The <code>index-only</code> class exists in the type, but no second transcription model is ever actually run in this build.</td>
+                <td>Acme's real problem is having one already running. The type is ready to receive it and correctly demote it, but the demo never exercises that path with a live second model.</td>
+              </tr>
+              <tr>
+                <td>The audit log is an append-only file per call, with no rotation or expiry.</td>
+                <td>A real deployment needs a retention policy, both for storage cost and for whatever compliance rules govern how long call records can legally be kept.</td>
+              </tr>
+              <tr>
+                <td>Ground-truth audio is local disk.</td>
+                <td>Same limitation as Q1's CallState: fine for surviving one process dying, not sufficient if a fresh instance per block cannot reach the same disk. See Q1's disclaimer, this is the identical fix.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p class="open-q">
+          <b>Worth confirming with Acme directly:</b> do they already retain raw call audio today,
+          and for how long? And do any of the fields flowing through this pipeline fall under
+          PII, PCI, or PHI rules, now that audio capture is a real, running feature and not a
+          hypothetical?
+        </p>
+      </div>
+    </div>
+
+  </section>
+
+  <section class="q" id="q7">
+    <div class="q-head"><span class="q-num">Q7</span><h2>Guarantees inside a free-form conversation</h2></div>
+
+    <p>
+      Three layers, strongest first, already introduced. Worth going under the hood on two of them
+      specifically: what "structurally impossible" looks like as actual syntax, and a guardrail this
+      build has that goes further than a status flag, a confirmation with an expiry clock.
+    </p>
+
+    <h3>Layer 1, made literal</h3>
+    <p>
+      "The model has no path to a validated signal unless the system genuinely validated" is not a
+      design intention. It is the shape of one ternary:
+    </p>
+
+<pre>const modelPayload = outcome.valid
+  ? {
+      status: "validated",
+      <span class="k">say_verbatim: outcome.normalizedValue.split("").join("-")</span>,  <span class="cmt">// only exists here</span>
+      instruction: "Read this back once, character by character, then confirm."
+    }
+  : {
+      status: "invalid",
+      instruction: "Do not tell the caller what you heard. Ask them to try again."
+      <span class="cmt">// say_verbatim is not merely empty — the field does not exist in this branch</span>
+    };</pre>
+
+    <p>
+      There is no code path where <code>say_verbatim</code> is present and <code>outcome.valid</code>
+      is false. Not a check that could be bypassed, a field that is syntactically absent from the
+      object literal in the branch where it would be wrong. And notice where the string comes from:
+      built fresh from <code>outcome.normalizedValue</code> at the moment of the payload, never
+      recalled from something said turns ago. That is the tool-call pattern run in reverse, instead
+      of the model handing you structured data, you hand it structured data, right before the one
+      moment it needs to be exact.
+    </p>
+
+    <h3>The guardrail with a clock: transaction confirmation</h3>
+    <p>
+      Q7-extended's transaction gate adds something the capture guardrail does not need: state that
+      decays. A pending "cancel my policy" has to mean something different five seconds after it was
+      asked than five minutes after. The mechanism worth seeing is <em>how</em> that decay is
+      checked, because the obvious approach, a background timer sweeping stale entries, is not what
+      this does.
+    </p>
+
+    <div class="machine">
+      <div class="machine-bar">
+        <span class="label">Lazy expiry, checked on read</span>
+        <button class="step" id="p7" type="button">Back</button>
+        <button class="step primary" id="n7" type="button">Step forward</button>
+        <button class="step" id="r7" type="button">Reset</button>
+      </div>
+
+      <div class="stage">
+        <p class="caption" id="cap7">Nothing has been requested yet on this call. The pending map holds no entry.</p>
+
+        <div class="tx-timeline">
+          <div class="tx-clock" id="txclock">t = 0s</div>
+          <div class="tx-track">
+            <div class="tx-window" id="txwindow"></div>
+            <div class="tx-now" id="txnow"></div>
+          </div>
+          <div class="tx-labels"><span>0s</span><span>60s window</span><span>65s</span></div>
+        </div>
+
+        <div class="q4-article" id="txmapbox">
+          <div class="q4a-title">pending map, this callId</div>
+          <div class="q4a-row" id="txmaprow"><span class="q4a-cells" id="txmapval" style="font-family:var(--mono)">— no entry —</span></div>
+        </div>
+
+        <div class="verdict" id="verdict7"></div>
+      </div>
+    </div>
+
+    <table class="tx-compare">
+      <thead><tr><th></th><th>none</th><th>expired</th></tr></thead>
+      <tbody>
+        <tr><td>What it means</td><td>the caller never asked</td><td>they asked, too long ago</td></tr>
+        <tr><td>Checked where</td><td>first line — <code>if (!tx) return</code></td><td>after the elapsed-time comparison</td></tr>
+        <tr><td>Cost</td><td>zero, no map entry ever existed</td><td>one comparison, one delete</td></tr>
+      </tbody>
+    </table>
+    <p>
+      Collapsing these into one "rejected" would hide the actual rule being demonstrated. A bare
+      "yes" cannot manufacture a transaction, and a stale "yes" cannot resurrect one, two different
+      failures, and the model is told which one happened.
+    </p>
+
+    <div class="disclaimer">
+      <div class="disclaimer-head">
+        <span class="marker">Disclaimer</span>
+        What a real implementation has to change
+      </div>
+      <div class="body">
+        <div class="scroll-x">
+          <table>
+            <thead>
+              <tr><th>In the POC</th><th>In production</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Layer 3, checking output before it is spoken, is described as the strongest backstop.</td>
+                <td><strong>Not built.</strong> The same gap as Q9, no pass anywhere in this codebase inspects text before it is turned into audio.</td>
+              </tr>
+              <tr>
+                <td>Layer 2 (explicit instructions) has held reliably in testing.</td>
+                <td>It is not structurally guaranteed the way layer 1 is. A model can, in principle, ignore an instruction. This layer's strength is empirical, observed behaviour under test, not a proof.</td>
+              </tr>
+              <tr>
+                <td>The 60 second confirmation window is fixed in <code>PENDING_TTL_MS</code>.</td>
+                <td>A demo compromise, long enough to sit through while testing the expiry path on purpose. Not a number derived from real caller behaviour or tuned against Acme's own call patterns.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </section>
+
+  <section class="q" id="q8">
+    <div class="q-head"><span class="q-num">Q8</span><h2>Version pinning and rollback</h2></div>
+
+    <p>
+      Q1's whole property pays off a second time here, and it is worth saying that connection out
+      loud: rollback is safe and instant specifically because call state lives in the orchestrator,
+      never in the model. Switching which model the next session talks to loses nothing, because
+      nothing worth keeping was ever stored inside a session to begin with.
+    </p>
+
+    <h3>The gate is one function, and it does not check what you might expect</h3>
+    <p>
+      Worth reading exactly, because it holds a detail easy to assume incorrectly from the UI alone:
+    </p>
+
+<pre>export function activateVersion(id: string): ActivateResult {
+  const version = modelVersionsData.versions.find(v => v.id === id);
+  if (!version) return { ok: false, reason: `Unknown model version: ${id}` };
+
+  const regression = regressionSuiteData.suites[id];
+  if (!regression) return { ok: false, reason: `No regression suite result on file for ${id}` };
+  if (regression.failed > 0) {
+    return { ok: false, reason: `Blocked: ${regression.failed} of ${regression.total}
+      regression tests are failing for ${id}...` };
+  }
+
+  <span class="k">activeModel = id;</span>   <span class="cmt">// the entire effect of a successful activation</span>
+  return { ok: true, active: activeModel };
+}</pre>
+
+    <p>
+      Notice what is <em>not</em> checked. The dashboard shows a "production / candidate /
+      deprecated" status on every row, but this function never reads that field. The only thing that
+      blocks activation is <code>regression.failed &gt; 0</code>. In this build's fixture data the
+      deprecated preview happens to also have 12 failing tests, so the two signals agree by
+      coincidence, not by the gate enforcing lifecycle status. The status label is informational, the
+      regression count is the actual lock.
+    </p>
+
+    <h3>Watch the gate decide, then watch the switch actually take</h3>
+
+    <div class="machine">
+      <div class="machine-bar">
+        <span class="label">activateVersion(id)</span>
+        <button class="step" id="p8" type="button">Back</button>
+        <button class="step primary" id="n8" type="button">Step forward</button>
+        <button class="step" id="r8" type="button">Reset</button>
+      </div>
+
+      <div class="stage">
+        <p class="caption" id="cap8">Three versions on file. <code>gpt-realtime-mini</code> is active.</p>
+
+        <div class="q8-rows" id="q8rows">
+          <div class="q8-row" id="q8row1">
+            <span class="q8-name">gpt-realtime-mini</span>
+            <span class="q8-badge live" id="q8b1">ACTIVE</span>
+            <span class="q8-reg">42 / 42 passed</span>
+          </div>
+          <div class="q8-row" id="q8row2">
+            <span class="q8-name">gpt-realtime (full)</span>
+            <span class="q8-badge" id="q8b2">candidate</span>
+            <span class="q8-reg">42 / 42 passed</span>
+          </div>
+          <div class="q8-row" id="q8row3">
+            <span class="q8-name">gpt-realtime-mini-preview-2024</span>
+            <span class="q8-badge" id="q8b3">deprecated</span>
+            <span class="q8-reg bad">30 / 42 passed — 12 failing</span>
+          </div>
+        </div>
+
+        <div class="verdict" id="verdict8"></div>
+
+        <div class="q4-article" style="margin-top: .8rem;">
+          <div class="q4a-row"><span class="q4a-label" style="width:9.5rem">next call connects to</span><span class="q4a-cells" id="q8nextcall" style="font-family:var(--mono)">gpt-realtime-mini</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="callout">
+      <span class="tag">Why this is more than a label change</span>
+      <p>
+        <code>getActiveModel()</code> is read at the exact moment a new upstream WebSocket opens,
+        the same call site that logs <code>Upstream session opened against ${getActiveModel()}</code>
+        for every session in this build, including Q1's block-transition reseeds. Activation does
+        not touch anything already running, it changes what the <em>next</em> connection asks for.
+        No redeploy, no restart, that is what makes it a rollback mechanism rather than a dashboard.
+      </p>
+    </div>
+
+    <div class="disclaimer">
+      <div class="disclaimer-head">
+        <span class="marker">Disclaimer</span>
+        What a real implementation has to change
+      </div>
+      <div class="body">
+        <div class="scroll-x">
+          <table>
+            <thead>
+              <tr><th>In the POC</th><th>In production</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>The regression suite is three hardcoded numbers per version, in a JSON file.</td>
+                <td><strong>No per-case breakdown, no real test execution, no CI pipeline.</strong> The gate logic itself is real running code, what it reads is a fixture, not a live test run.</td>
+              </tr>
+              <tr>
+                <td>Shadow traffic is described as part of the two-step validation process.</td>
+                <td><strong>Not built at all</strong>, confirmed by searching the codebase, zero references. Running a candidate in parallel on real calls without responding is architecture, not something demonstrable here.</td>
+              </tr>
+              <tr>
+                <td>Three versions, one active at a time, switched by one button.</td>
+                <td>Real deployments likely need staged rollout, a percentage of traffic, not an all-or-nothing switch. This build demonstrates the safety property, not the rollout mechanics.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p class="open-q">
+          <b>Worth asking Acme directly:</b> can they share the specific cases their rejected update
+          failed on? Those become the first real entries in a regression suite that currently has
+          none, an aggregate count with nothing behind it yet.
+        </p>
+      </div>
+    </div>
+
+  </section>
+
+  <section class="q" id="q9">
+    <div class="q-head"><span class="q-num">Q9</span><h2>Half-cascade versus full speech-to-speech</h2></div>
+
+    <div class="notbuilt">
+      <span class="notbuilt-tag">Read this before the rest of the section</span>
+      Every other question on this page walked through real, running code. This one does not,
+      because there is none to walk through. No page, no shadow-mode logging, nothing. What follows
+      is architecture and a decision framework, and it is written to look different from the eight
+      sections above it on purpose, so it is never mistaken for a demo.
+    </div>
+
+    <h3>Two pipeline shapes, not two settings</h3>
+    <p>
+      Full speech-to-speech has exactly one hop: audio in, one model, audio out. Nothing sits between
+      the model deciding what to say and the caller hearing it, which is what makes it fast and
+      natural, and also what makes it unreviewable, there is no point in the pipeline where anyone
+      else gets a look. Half-cascade is not a flag on that pipeline, it is a structurally different
+      one.
+    </p>
+
+    <figure class="fig">
+      <svg viewBox="0 0 860 340" role="img" width="860" height="340"
+           aria-label="Two pipelines compared. Full speech-to-speech: caller audio into the Realtime model, straight out as audio, one hop. True half-cascade: caller audio into the Realtime model in text-only mode, through a veto or rewrite step, through a separate text-to-speech service, then out as audio — three additional hops, each adding latency.">
+        <defs>
+          <marker id="q9ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <polygon points="0,0 10,5 0,10" fill="currentColor"/>
+          </marker>
+          <marker id="q9ar-w" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <polygon points="0,0 10,5 0,10" fill="var(--warn)"/>
+          </marker>
+        </defs>
+
+        <text x="20" y="26" font-size="12" font-weight="600" fill="currentColor">Full speech-to-speech — what's used today</text>
+        <rect x="20" y="40" width="140" height="56" rx="4" fill="none" stroke="currentColor" stroke-width="1.5"/>
+        <text x="90" y="64" text-anchor="middle" font-size="11" fill="currentColor">Caller audio</text>
+        <text x="90" y="80" text-anchor="middle" font-size="9.5" fill="currentColor" opacity="0.65">in</text>
+
+        <line x1="160" y1="68" x2="228" y2="68" stroke="currentColor" stroke-width="1.5" marker-end="url(#q9ar)"/>
+
+        <rect x="236" y="40" width="180" height="56" rx="4" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1.5"/>
+        <text x="326" y="64" text-anchor="middle" font-size="11" font-weight="600" fill="currentColor">Realtime model</text>
+        <text x="326" y="80" text-anchor="middle" font-size="9.5" fill="currentColor" opacity="0.7">one hop, native prosody</text>
+
+        <line x1="416" y1="68" x2="484" y2="68" stroke="currentColor" stroke-width="1.5" marker-end="url(#q9ar)"/>
+
+        <rect x="492" y="40" width="140" height="56" rx="4" fill="none" stroke="currentColor" stroke-width="1.5"/>
+        <text x="562" y="64" text-anchor="middle" font-size="11" fill="currentColor">Caller audio</text>
+        <text x="562" y="80" text-anchor="middle" font-size="9.5" fill="currentColor" opacity="0.65">out — nothing reviewed it</text>
+
+        <line x1="632" y1="20" x2="632" y2="345" stroke="currentColor" stroke-width="1" stroke-dasharray="4 5" opacity="0.35"/>
+
+        <text x="680" y="26" font-size="12" font-weight="600" fill="currentColor">True half-cascade</text>
+
+        <rect x="20" y="140" width="140" height="56" rx="4" fill="none" stroke="currentColor" stroke-width="1.5"/>
+        <text x="90" y="164" text-anchor="middle" font-size="11" fill="currentColor">Caller audio</text>
+        <text x="90" y="180" text-anchor="middle" font-size="9.5" fill="currentColor" opacity="0.65">in</text>
+
+        <line x1="160" y1="168" x2="212" y2="168" stroke="currentColor" stroke-width="1.5" marker-end="url(#q9ar)"/>
+
+        <rect x="220" y="140" width="150" height="56" rx="4" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1.5"/>
+        <text x="295" y="164" text-anchor="middle" font-size="11" font-weight="600" fill="currentColor">Realtime model</text>
+        <text x="295" y="180" text-anchor="middle" font-size="9.5" fill="currentColor" opacity="0.7">text only, audio disabled</text>
+
+        <line x1="370" y1="168" x2="422" y2="168" stroke="var(--warn)" stroke-width="2" marker-end="url(#q9ar-w)"/>
+        <text x="396" y="126" text-anchor="middle" font-size="9.5" fill="var(--warn)" font-weight="600">+ hop</text>
+
+        <rect x="430" y="140" width="150" height="56" rx="4" fill="var(--warn-soft)" stroke="var(--warn)" stroke-width="1.5"/>
+        <text x="505" y="160" text-anchor="middle" font-size="11" font-weight="600" fill="currentColor">Veto / rewrite</text>
+        <text x="505" y="175" text-anchor="middle" font-size="9.5" fill="currentColor" opacity="0.75">your own checkpoint</text>
+        <text x="505" y="189" text-anchor="middle" font-size="9" fill="var(--warn)">not built anywhere here</text>
+
+        <line x1="580" y1="168" x2="632" y2="168" stroke="var(--warn)" stroke-width="2" marker-end="url(#q9ar-w)"/>
+        <text x="606" y="126" text-anchor="middle" font-size="9.5" fill="var(--warn)" font-weight="600">+ hop</text>
+
+        <rect x="640" y="140" width="150" height="56" rx="4" fill="var(--warn-soft)" stroke="var(--warn)" stroke-width="1.5"/>
+        <text x="715" y="160" text-anchor="middle" font-size="11" font-weight="600" fill="currentColor">Separate TTS</text>
+        <text x="715" y="175" text-anchor="middle" font-size="9.5" fill="currentColor" opacity="0.75">a real vendor, a real bill</text>
+        <text x="715" y="189" text-anchor="middle" font-size="9" fill="var(--warn)">loses native prosody</text>
+
+        <line x1="715" y1="196" x2="715" y2="228" stroke="currentColor" stroke-width="1.5" marker-end="url(#q9ar)"/>
+
+        <rect x="640" y="236" width="150" height="50" rx="4" fill="none" stroke="currentColor" stroke-width="1.5"/>
+        <text x="715" y="258" text-anchor="middle" font-size="11" fill="currentColor">Caller audio</text>
+        <text x="715" y="273" text-anchor="middle" font-size="9.5" fill="currentColor" opacity="0.65">out — reviewed before synthesis</text>
+
+        <text x="330" y="320" font-size="10.5" fill="currentColor" opacity="0.7">Two additional hops, each one is where the 200–400 ms and the TTS line item actually come from — not the model, the architecture around it.</text>
+      </svg>
+      <figcaption>
+        Not a mode flag. Half-cascade replaces the last hop with three, and the middle one, the
+        actual veto, is the one nobody has open-sourced a reference implementation of.
+      </figcaption>
+    </figure>
+
+    <h3>What "shadow mode" today actually is, and precisely is not</h3>
+    <p>
+      Requesting both text and audio modalities from the Realtime API gets you a text stream
+      alongside the spoken output. That is real and available right now, no build required. It is
+      also not on the diagram above, because it does not belong to either pipeline, it does not sit
+      <em>in</em> the audio path at all.
+    </p>
+
+    <div class="tx-timeline" style="margin-top: 1.1rem;">
+      <div class="tx-clock">both streams begin at the same instant</div>
+      <div class="parallel-track">
+        <div class="parallel-row">
+          <span class="parallel-label">audio stream</span>
+          <div class="parallel-bar"><div class="parallel-fill audio-fill"></div></div>
+        </div>
+        <div class="parallel-row">
+          <span class="parallel-label">text stream</span>
+          <div class="parallel-bar"><div class="parallel-fill text-fill"></div></div>
+        </div>
+      </div>
+    </div>
+    <p style="margin-top: .9rem;">
+      They race, they do not queue behind each other. By the time text has arrived and could be read
+      by a checkpoint, the matching audio bytes are already generated, in most implementations
+      already sent. There is nothing left to stop. What this mode is genuinely good for is
+      <strong>logging</strong> what a checkpoint would have vetoed, real signal for deciding where a
+      true veto is worth building, but calling it a review gate would be describing a capability that
+      does not exist.
+    </p>
+
+    <h3>The decision framework, same shape as Q7</h3>
+    <p>
+      We do not have verifiable production numbers at Acme's volume, and it is better to say so than
+      hand over a figure that cannot be backed up. What transfers directly from Q7 is the scoping
+      principle: do not apply half-cascade to the whole conversation. Scope it to turns that actually
+      need a veto, compliance-sensitive statements, critical confirmations, full speech-to-speech
+      everywhere else. Paying the cost on routine chit-chat that never needed reviewing is the same
+      blanket-rigidity mistake as Q7's, applied to infrastructure instead of prompts.
+    </p>
+    <p>
+      And the way to find that scope is empirical, not argued: instrument the checkpoint once it
+      exists, log how often it actually triggers a rewrite. Rewrites clustering in a narrow category
+      is the evidence for scoping narrowly. Rewrites spread wide is the evidence the broader cost is
+      worth paying. Either way the answer comes from Acme's own instrumentation, not a benchmark
+      slide.
+    </p>
+
+    <div class="disclaimer">
+      <div class="disclaimer-head">
+        <span class="marker">Disclaimer</span>
+        What this actually is
+      </div>
+      <div class="body">
+        <p style="max-width: 44rem; font-size: .95rem; color: var(--ink-soft); margin: 0;">
+          Not "not fully built", <strong>not built at all</strong>. Not the observation mode, not the
+          veto, no page in this application demonstrates any part of this section. Every claim above
+          is architecture and a framework for deciding, offered honestly as exactly that, and nothing
+          here should be pointed to as something a viewer has already seen work.
+        </p>
+      </div>
+    </div>
+
+    <footer class="serial" style="border-top-color: var(--accent); padding-top: 2.2rem;">
+      That's all nine. One principle underneath eight of them, and one honest gap where the ninth
+      admits it does not have an answer built yet, which is itself the more credible thing to say
+      out loud than pretending otherwise.
+    </footer>
+  </section>
+</div>
+</div>
+
+<script>
+  // Track current active question in sidebar
+  (function () {
+    var sidebarLinks = document.querySelectorAll('.sidebar-nav a');
+    var sections = document.querySelectorAll('section.q');
+
+    function updateActiveLink() {
+      var currentQ = null;
+      var scrollPos = window.scrollY + 150;
+
+      sections.forEach(function(section) {
+        if (section.offsetTop <= scrollPos) {
+          currentQ = section.id;
+        }
+      });
+
+      sidebarLinks.forEach(function(link) {
+        link.classList.remove('active');
+        if (currentQ && link.getAttribute('href') === '#' + currentQ) {
+          link.classList.add('active');
+        }
+      });
+    }
+
+    window.addEventListener('scroll', updateActiveLink);
+    window.addEventListener('load', updateActiveLink);
+    updateActiveLink();
+  })();
+
+  (function () {
+    var steps = [
+      {
+        cap: '<b>Mid-call, inside Block 1.</b> The caller has given their policy ID and it has validated. Two separate things now hold information: the session’s conversation memory, and CallState in the orchestrator.',
+        s1: 'active', s1dot: 'socket open', memGone: false,
+        s2: 'ghost', s2dot: 'not opened', seed: false, flow: false, pulse: false, empty: true
+      },
+      {
+        cap: '<b>The block ends and the socket closes.</b> Everything in the left-hand box is now unrecoverable — there is no API to fetch it back. Watch CallState: it is untouched, because it was never inside the session to begin with.',
+        s1: 'dead', s1dot: 'socket closed', memGone: true,
+        s2: 'ghost', s2dot: 'not opened', seed: false, flow: false, pulse: true, empty: true
+      },
+      {
+        cap: '<b>The orchestrator reads CallState and builds a reseed preamble.</b> A plain function, three branches, no model involved. It produces a conclusion about what is already known, not a recording of how it became known.',
+        s1: 'dead', s1dot: 'socket closed', memGone: true,
+        s2: 'ghost', s2dot: 'not opened', seed: false, flow: true, pulse: true, empty: true
+      },
+      {
+        cap: '<b>A brand new session opens with the preamble prepended to its instructions.</b> The model has no memory of the earlier block, and does not need one. It has been told the conclusion and told not to greet again. The caller never repeats themselves.',
+        s1: 'dead', s1dot: 'socket closed', memGone: true,
+        s2: 'active', s2dot: 'socket open', seed: true, flow: true, pulse: false, empty: false
+      }
+    ];
+
+    var i = 0;
+    var el = {
+      cap: document.getElementById('caption'),
+      s1: document.getElementById('s1'), s1dot: document.getElementById('s1dot'),
+      s1mem: document.getElementById('s1mem'),
+      s2: document.getElementById('s2'), s2dot: document.getElementById('s2dot'),
+      s2mem: document.getElementById('s2mem'), s2empty: document.getElementById('s2empty'),
+      flow: document.getElementById('flow'), statebar: document.getElementById('statebar'),
+      next: document.getElementById('next'), prev: document.getElementById('prev'),
+      reset: document.getElementById('reset')
+    };
+
+    var seedNode = null;
+
+    function render() {
+      var s = steps[i];
+      el.cap.innerHTML = s.cap;
+
+      el.s1.className = 'sess ' + s.s1;
+      el.s1dot.textContent = s.s1dot;
+      var items = el.s1mem.querySelectorAll('.mem-item');
+      for (var n = 0; n < items.length; n++) {
+        items[n].classList.toggle('gone', s.memGone);
+      }
+
+      el.s2.className = 'sess ' + s.s2;
+      el.s2dot.textContent = s.s2dot;
+      el.s2empty.classList.toggle('hide', !s.empty);
+
+      if (s.seed && !seedNode) {
+        seedNode = document.createElement('div');
+        seedNode.className = 'mem-item seed';
+        seedNode.textContent = 'reseed: "…already validated as BN742D. Do not ask for it again."';
+        el.s2mem.appendChild(seedNode);
+      } else if (!s.seed && seedNode) {
+        el.s2mem.removeChild(seedNode);
+        seedNode = null;
+      }
+
+      el.flow.classList.toggle('show', s.flow);
+      el.statebar.classList.toggle('pulse', s.pulse);
+
+      el.prev.disabled = (i === 0);
+      el.next.disabled = (i === steps.length - 1);
+      el.next.textContent = (i === steps.length - 1) ? 'End of sequence' : 'Step forward';
+    }
+
+    el.next.addEventListener('click', function () { if (i < steps.length - 1) { i++; render(); } });
+    el.prev.addEventListener('click', function () { if (i > 0) { i--; render(); } });
+    el.reset.addEventListener('click', function () { i = 0; render(); });
+
+    render();
+  })();
+
+  /* ---------- Q2: two clocks ---------- */
+  (function () {
+    var steps = [
+      {
+        cap: '<b>The bot begins a five second read-back.</b> Two things start at once: OpenAI generating the audio, and the caller actually hearing it. They do not run at the same speed.',
+        gen: 18, play: 6, genState: 'running', genCls: '', playState: 'playing', playCls: '',
+        barge: false, overrun: false, verdict: '', vcls: ''
+      },
+      {
+        cap: '<b>Generation finishes.</b> <code>response.done</code> fires and the model is completely done. The caller is roughly one second into a five second sentence.',
+        gen: 100, play: 22, genState: 'response.done', genCls: 'done', playState: 'playing', playCls: '',
+        barge: false, overrun: false,
+        verdict: 'From here on, <b>responseInFlight is false</b> while the caller still has four seconds of audio ahead of them. The two clocks have separated.',
+        vcls: ''
+      },
+      {
+        cap: '<b>The caller starts talking.</b> <code>input_audio_buffer.speech_started</code> arrives. The question is what the relay checks in this instant.',
+        gen: 100, play: 46, genState: 'response.done', genCls: 'done', playState: 'playing', playCls: '',
+        barge: true, overrun: false,
+        verdict: 'The bot is mid-sentence to the caller, but finished as far as the API is concerned.',
+        vcls: ''
+      },
+      {
+        cap: '<b>Gating on generation state: the bug.</b> The relay asks "is a response in flight?", gets no, concludes there is nothing to interrupt, and does nothing at all.',
+        gen: 100, play: 100, genState: 'response.done', genCls: 'done', playState: 'talked over the caller', playCls: 'bad',
+        barge: true, overrun: true,
+        verdict: '<b>The bot talks over the caller to the end of its sentence.</b> Nothing errors, no log looks wrong, and the code reads as correct. This is exactly what the symptom looked like before it was fixed.',
+        vcls: 'bad'
+      },
+      {
+        cap: '<b>Gating on playback: the fix.</b> The relay tells the browser to stop regardless of generation state, and the browser reports how much audio genuinely reached a speaker.',
+        gen: 100, play: 46, genState: 'response.done', genCls: 'done', playState: 'cut at 1840 ms', playCls: 'cut',
+        barge: true, overrun: false,
+        verdict: '<b>Playback stops on the word.</b> That 1840 becomes <code>audio_end_ms</code> in the truncate call, so the model’s history now ends exactly where the caller’s ears did.',
+        vcls: 'good'
+      }
+    ];
+
+    var i = 0;
+    var el = {
+      cap: document.getElementById('cap2'),
+      gen: document.getElementById('genfill'), play: document.getElementById('playfill'),
+      genState: document.getElementById('genstate'), playState: document.getElementById('playstate'),
+      barge: document.getElementById('barge'), verdict: document.getElementById('verdict2'),
+      next: document.getElementById('n2'), prev: document.getElementById('p2'), reset: document.getElementById('r2')
+    };
+
+    function render() {
+      var s = steps[i];
+      el.cap.innerHTML = s.cap;
+      el.gen.style.width = s.gen + '%';
+      el.play.style.width = s.play + '%';
+      el.play.className = 'fill play' + (s.overrun ? ' overrun' : '');
+      el.genState.textContent = s.genState;
+      el.genState.className = 'clock-state ' + s.genCls;
+      el.playState.textContent = s.playState;
+      el.playState.className = 'clock-state ' + s.playCls;
+      el.barge.classList.toggle('show', s.barge);
+      el.verdict.innerHTML = s.verdict;
+      el.verdict.className = 'verdict ' + s.vcls;
+
+      el.prev.disabled = (i === 0);
+      el.next.disabled = (i === steps.length - 1);
+      el.next.textContent = (i === steps.length - 1) ? 'End of sequence' : 'Step forward';
+    }
+
+    el.next.addEventListener('click', function () { if (i < steps.length - 1) { i++; render(); } });
+    el.prev.addEventListener('click', function () { if (i > 0) { i--; render(); } });
+    el.reset.addEventListener('click', function () { i = 0; render(); });
+
+    render();
+  })();
+
+  /* ---------- Q3: two triggers + latch ---------- */
+  (function () {
+    var steps = [
+      {
+        cap: 'A call is mid-capture. Two independent paths can fire a handoff. Watch the latch on the right — it is what stops a call from ever handing off twice.',
+        aCls: '', bCls: '', flow: false, latchSet: false, latchVal: 'false',
+        note: 'a second trigger on this call is a no-op from here on'
+      },
+      {
+        cap: '<b>Trigger A fires.</b> The caller says "let me talk to a person." Honoured immediately, at any tier — the wording is not matched against a script, any phrasing that means the same thing works.',
+        aCls: 'fired', bCls: '', flow: true, latchSet: false, latchVal: 'false',
+        note: 'not yet set — the check happens inside fireHandoff itself'
+      },
+      {
+        cap: '<b>fireHandoff runs.</b> It checks the latch first. False, so it proceeds: builds the packet, sets the latch, and this call has now handed off.',
+        aCls: 'fired', bCls: 'blocked', flow: true, latchSet: true, latchVal: 'true',
+        note: 'set — any further trigger on this call is now a no-op'
+      },
+      {
+        cap: '<b>Suppose Trigger B also fires moments later</b> — a Tier 3 keypad entry that was already in flight fails right after the caller asked for a human. Before the latch existed, this <em>silently overwrote</em> the reason.',
+        aCls: 'fired', bCls: 'blocked', flow: true, latchSet: true, latchVal: 'true',
+        note: '<b>fireHandoff returns immediately.</b> The packet still says caller-request, the reason that actually happened first.'
+      }
+    ];
+
+    var i = 0;
+    var el = {
+      cap: document.getElementById('cap3'),
+      trigA: document.getElementById('trigA'), trigB: document.getElementById('trigB'),
+      flow: document.getElementById('flow3'),
+      latch: document.getElementById('latch3'), latchBox: document.getElementById('latchbox'),
+      latchNote: document.getElementById('latchnote'),
+      next: document.getElementById('n3'), prev: document.getElementById('p3'), reset: document.getElementById('r3')
+    };
+
+    function render() {
+      var s = steps[i];
+      el.cap.innerHTML = s.cap;
+      el.trigA.className = 'trig ' + s.aCls;
+      el.trigB.className = 'trig ' + s.bCls;
+      el.flow.classList.toggle('show', s.flow);
+      el.latch.className = 'latch' + (s.latchSet ? ' set' : '');
+      el.latchBox.textContent = s.latchVal;
+      el.latchNote.innerHTML = s.note;
+
+      el.prev.disabled = (i === 0);
+      el.next.disabled = (i === steps.length - 1);
+      el.next.textContent = (i === steps.length - 1) ? 'End of sequence' : 'Step forward';
+    }
+
+    el.next.addEventListener('click', function () { if (i < steps.length - 1) { i++; render(); } });
+    el.prev.addEventListener('click', function () { if (i > 0) { i--; render(); } });
+    el.reset.addEventListener('click', function () { i = 0; render(); });
+
+    render();
+  })();
+
+  /* ---------- Q4: anchor-gated search ---------- */
+  (function () {
+    var allTokens = ['what', 'is', 'the', 'capital', 'of', 'france'];
+    var stopwords = { what: 1, is: 1, the: 1, of: 1 };
+    var anchorSet = ['grace', 'period', 'premium', 'payments', 'late', 'payment', 'due', 'missed', 'overdue'];
+
+    function tokChips(state) {
+      // state: 'raw' | 'naive' | 'filtered'
+      return allTokens.map(function (t) {
+        if (state === 'raw') return '<span class="q4-tok">' + t + '</span>';
+        if (state === 'naive') return '<span class="q4-tok kept">' + t + '</span>';
+        var isStop = stopwords[t];
+        return '<span class="q4-tok ' + (isStop ? 'dropped' : 'kept') + '">' + t + '</span>';
+      }).join('');
+    }
+
+    function anchorChips(activeCheck) {
+      return anchorSet.map(function (t) {
+        var cls = activeCheck ? 'miss' : '';
+        return '<span class="q4-tok ' + cls + '">' + t + '</span>';
+      }).join('');
+    }
+
+    var steps = [
+      {
+        cap: 'A caller asks something the knowledge base has nothing to do with. Watch what happens to the word "the".',
+        tokState: 'raw', bodyMark: '', anchorHtml: anchorChips(false), verdict: '', vcls: ''
+      },
+      {
+        cap: '<b>Without stopword filtering</b> (a naive tokenizer), every word becomes a query token, "the" included. And "the" appears almost everywhere, including this article\'s own body text.',
+        tokState: 'naive', bodyMark: '', anchorHtml: anchorChips(false),
+        verdict: 'If body text alone were enough to qualify a match, this query would incorrectly return the grace-period article, because of one word that carries no meaning at all.',
+        vcls: 'bad'
+      },
+      {
+        cap: '<b>The stopword list runs first.</b> "what", "is", "the", "of" are all struck out before they ever become query tokens. Only <code>capital</code> and <code>france</code> survive.',
+        tokState: 'filtered', bodyMark: 'safe', anchorHtml: anchorChips(false),
+        verdict: '"the" can no longer produce a false hit anywhere — it never became a token to begin with.',
+        vcls: ''
+      },
+      {
+        cap: '<b>The anchor gate runs second, as a backstop.</b> <code>capital</code> and <code>france</code> are checked only against this article\'s title and hand-written keywords, never its body.',
+        tokState: 'filtered', bodyMark: 'safe', anchorHtml: anchorChips(true),
+        verdict: 'Neither token appears in the anchor set. <b>anchorHits: 0</b> — even a coincidental body-text hit could not have qualified this article alone.',
+        vcls: ''
+      },
+      {
+        cap: 'Every other article fails the same gate for the same reason. The filter <code>anchorHits &gt; 0</code> removes all five before scoring ever runs.',
+        tokState: 'filtered', bodyMark: 'safe', anchorHtml: anchorChips(true),
+        verdict: '<b>0 matched.</b> The model receives <code>status: "no_match"</code> and is told plainly not to guess — correctly, this time.',
+        vcls: 'good'
+      }
+    ];
+
+    var i = 0;
+    var el = {
+      cap: document.getElementById('cap4'),
+      tokens: document.getElementById('q4tokens'),
+      bodyhit: document.getElementById('q4bodyhit'),
+      anchor: document.getElementById('q4anchor'),
+      verdict: document.getElementById('verdict4'),
+      next: document.getElementById('n4'), prev: document.getElementById('p4'), reset: document.getElementById('r4')
+    };
+
+    function render() {
+      var s = steps[i];
+      el.cap.innerHTML = s.cap;
+      el.tokens.innerHTML = tokChips(s.tokState);
+      el.bodyhit.className = s.bodyMark;
+      el.anchor.innerHTML = s.anchorHtml;
+      el.verdict.innerHTML = s.verdict;
+      el.verdict.className = 'verdict ' + s.vcls;
+
+      el.prev.disabled = (i === 0);
+      el.next.disabled = (i === steps.length - 1);
+      el.next.textContent = (i === steps.length - 1) ? 'End of sequence' : 'Step forward';
+    }
+
+    el.next.addEventListener('click', function () { if (i < steps.length - 1) { i++; render(); } });
+    el.prev.addEventListener('click', function () { if (i > 0) { i--; render(); } });
+    el.reset.addEventListener('click', function () { i = 0; render(); });
+
+    render();
+  })();
+
+  /* ---------- Q5a: the ladder, three real values ---------- */
+  (function () {
+    var steps = [
+      {
+        input: '"banana banana banana"', cap: 'Three real attempts, in the order a caller might actually produce them.',
+        norm: ['–', '', 'trim, uppercase, strip spaces'],
+        regex: ['–', '', '^[A-Z]{2}\\d{3}[A-Z]$'],
+        lookup: ['–', '', 'a real database read — the only step with a network cost'],
+        verdict: '', vcls: ''
+      },
+      {
+        input: '"banana banana banana"', cap: 'Normalize always runs and always passes — it just reshapes input, it never rejects.',
+        norm: ['✓', 'pass', '"banana banana banana" → "BANANABANANABANANA"'],
+        regex: ['–', '', '^[A-Z]{2}\\d{3}[A-Z]$'],
+        lookup: ['–', '', 'a real database read — the only step with a network cost'],
+        verdict: '', vcls: ''
+      },
+      {
+        input: '"banana banana banana"', cap: '<b>Regex fails, and lookup is never attempted.</b> Watch the lookup row go dim — that is not "also failed", it is "did not run".',
+        norm: ['✓', 'pass', '"banana banana banana" → "BANANABANANABANANA"'],
+        regex: ['✕', 'fail', 'does not match 2 letters, 3 digits, 1 letter'],
+        lookup: ['–', 'skip', 'skipped — format already failed, no point spending a network round trip'],
+        verdict: 'Rejected, and no database was touched. In production that is a saved lookup on every garbled utterance the ladder will ever see.',
+        vcls: 'bad'
+      },
+      {
+        input: '"PN742T"', cap: '<b>A different value, well-formed this time.</b> The interesting case: format is valid, but does the policy actually exist?',
+        norm: ['✓', 'pass', '"PN742T" was already canonical'],
+        regex: ['✓', 'pass', 'matches 2 letters, 3 digits, 1 letter'],
+        lookup: ['–', '', 'a real database read — the only step with a network cost'],
+        verdict: '', vcls: ''
+      },
+      {
+        input: '"PN742T"', cap: 'Format passing is what unlocks the lookup — this is the one case where spending a real database read is worth it.',
+        norm: ['✓', 'pass', '"PN742T" was already canonical'],
+        regex: ['✓', 'pass', 'matches 2 letters, 3 digits, 1 letter'],
+        lookup: ['✕', 'fail', 'no policy matches PN742T — well-formed but does not exist'],
+        verdict: 'Rejected. The caller hears nothing about why, and the bot never says what it heard — only that it will try again, differently.',
+        vcls: 'bad'
+      },
+      {
+        input: '"BN742D"', cap: 'The value that actually exists.',
+        norm: ['✓', 'pass', '"BN742D" was already canonical'],
+        regex: ['✓', 'pass', 'matches 2 letters, 3 digits, 1 letter'],
+        lookup: ['✓', 'pass', 'policy BN742D found — holder J. Doe, status active'],
+        verdict: '<b>Validated.</b> Only now does say_verbatim exist in the payload at all — see Q7 for what the model is and is not handed at this exact moment.',
+        vcls: 'good'
+      }
+    ];
+
+    var i = 0;
+    var el = {
+      cap: document.getElementById('cap5'), input: document.getElementById('q5input'),
+      normRow: document.getElementById('l5normalize'), normIcon: document.getElementById('l5normicon'), normDetail: document.getElementById('l5normdetail'),
+      regexRow: document.getElementById('l5regex'), regexIcon: document.getElementById('l5regexicon'), regexDetail: document.getElementById('l5regexdetail'),
+      lookupRow: document.getElementById('l5lookup'), lookupIcon: document.getElementById('l5lookupicon'), lookupDetail: document.getElementById('l5lookupdetail'),
+      verdict: document.getElementById('verdict5'),
+      next: document.getElementById('n5'), prev: document.getElementById('p5'), reset: document.getElementById('r5')
+    };
+
+    function rowCls(result) { return result === 'pass' ? 'pass' : result === 'fail' ? 'fail' : result === 'skip' ? 'skip' : ''; }
+
+    function render() {
+      var s = steps[i];
+      el.cap.innerHTML = s.cap;
+      el.input.textContent = s.input;
+
+      el.normRow.className = 'l5step ' + rowCls(s.norm[1]); el.normIcon.textContent = s.norm[0]; el.normDetail.textContent = s.norm[2];
+      el.regexRow.className = 'l5step ' + rowCls(s.regex[1]); el.regexIcon.textContent = s.regex[0]; el.regexDetail.textContent = s.regex[2];
+      el.lookupRow.className = 'l5step ' + rowCls(s.lookup[1]); el.lookupIcon.textContent = s.lookup[0]; el.lookupDetail.textContent = s.lookup[2];
+
+      el.verdict.innerHTML = s.verdict;
+      el.verdict.className = 'verdict ' + s.vcls;
+
+      el.prev.disabled = (i === 0);
+      el.next.disabled = (i === steps.length - 1);
+      el.next.textContent = (i === steps.length - 1) ? 'End of sequence' : 'Step forward';
+    }
+
+    el.next.addEventListener('click', function () { if (i < steps.length - 1) { i++; render(); } });
+    el.prev.addEventListener('click', function () { if (i > 0) { i--; render(); } });
+    el.reset.addEventListener('click', function () { i = 0; render(); });
+
+    render();
+  })();
+
+  /* ---------- Q5b: tap decode ---------- */
+  (function () {
+    var steps = [
+      { cap: 'Entering "B" needs the 3rd letter on key 2 — three taps on the same key.', keyPress: false, active: -1, pending: '', buffer: '', verdict: '', vcls: '' },
+      { cap: 'First tap on key 2 lands on the digit itself. If the caller stopped right now, "2" is what would commit.', keyPress: true, active: 0, pending: '2', buffer: '', verdict: '', vcls: '' },
+      { cap: 'A second tap, before the 1200 ms window closes, cycles forward — this is what "quickly" means mechanically: inside the timer.', keyPress: true, active: 1, pending: 'A', buffer: '', verdict: '', vcls: '' },
+      { cap: 'Third tap lands on B.', keyPress: true, active: 2, pending: 'B', buffer: '', verdict: '', vcls: '' },
+      {
+        cap: '<b>The caller moves to the next key, or 1200 ms of silence passes.</b> Either one commits the pending character and resets the cycle.',
+        keyPress: false, active: -1, pending: '', buffer: 'B',
+        verdict: 'This exact mechanism is what lets a caller spell "BB", two Bs in a row, correctly: without the pause and commit, six taps on the same key would just be six steps of one ongoing cycle, not two separate letters.',
+        vcls: 'good'
+      }
+    ];
+
+    var i = 0;
+    var el = {
+      cap: document.getElementById('cap5b'), key: document.getElementById('tapkey'),
+      opts: document.querySelectorAll('.tap-opt'), buffer: document.getElementById('tapbuffer'),
+      pending: document.getElementById('tappending'), verdict: document.getElementById('verdict5b'),
+      next: document.getElementById('n5b'), prev: document.getElementById('p5b'), reset: document.getElementById('r5b')
+    };
+
+    function render() {
+      var s = steps[i];
+      el.cap.innerHTML = s.cap;
+      el.key.className = 'tap-key' + (s.keyPress ? ' press' : '');
+      el.opts.forEach(function (opt) {
+        var idx = Number(opt.getAttribute('data-i'));
+        var cls = 'tap-opt';
+        if (idx === s.active) cls += ' active';
+        if (s.buffer && idx === 2) cls += ' committed';
+        opt.className = cls;
+      });
+      el.buffer.textContent = s.buffer;
+      el.pending.textContent = s.pending;
+      el.verdict.innerHTML = s.verdict;
+      el.verdict.className = 'verdict ' + s.vcls;
+
+      el.prev.disabled = (i === 0);
+      el.next.disabled = (i === steps.length - 1);
+      el.next.textContent = (i === steps.length - 1) ? 'End of sequence' : 'Step forward';
+    }
+
+    el.next.addEventListener('click', function () { if (i < steps.length - 1) { i++; render(); } });
+    el.prev.addEventListener('click', function () { if (i > 0) { i--; render(); } });
+    el.reset.addEventListener('click', function () { i = 0; render(); });
+
+    render();
+  })();
+
+  /* ---------- Q6: recording gate ---------- */
+  (function () {
+    var steps = [
+      {
+        cap: 'Two identical calls, differing in one respect: whether "Record this call" was checked before Start.',
+        aCls: '', bCls: '', aItems: [], bItems: [], verdict: '', vcls: ''
+      },
+      {
+        cap: 'Both calls make the same tool call. <code>writeAudit()</code> runs, and the in-memory cache is written <b>unconditionally, in both cases</b> — this is what the live wire log the browser watches is reading from.',
+        aCls: '', bCls: '', aItems: [['cache: submit_captured_field("BN742D")', '']], bItems: [['cache: submit_captured_field("BN742D")', '']],
+        verdict: '', vcls: ''
+      },
+      {
+        cap: '<code>persistAuditEntry()</code> runs next, and the very first line checks the gate: <code>if (!isRecordingEnabled(callId)) return;</code>',
+        aCls: '', bCls: '', aItems: [['cache: submit_captured_field("BN742D")', ''], ['persistAuditEntry() — checking gate…', '']],
+        bItems: [['cache: submit_captured_field("BN742D")', ''], ['persistAuditEntry() — checking gate…', '']],
+        verdict: '', vcls: ''
+      },
+      {
+        cap: '<b>The two calls diverge here, and only here.</b> Nothing upstream of this check knew or cared about the toggle.',
+        aCls: 'ghost', bCls: 'active',
+        aItems: [['cache: submit_captured_field("BN742D")', ''], ['isRecordingEnabled → false → return', '']],
+        bItems: [['cache: submit_captured_field("BN742D")', ''], ['isRecordingEnabled → true → ensureCallDir()', 'seed'], ['appended to audit.jsonl', 'seed']],
+        verdict: '<b>Call A:</b> <code>data/calls/&lt;callId&gt;/</code> does not exist — verified against the real filesystem, not the intended behaviour, the actual behaviour. <b>Call B:</b> a real, growing file on disk.',
+        vcls: 'good'
+      }
+    ];
+
+    var i = 0;
+    var el = {
+      cap: document.getElementById('cap6'),
+      a: document.getElementById('callA'), aMem: document.getElementById('callAmem'),
+      b: document.getElementById('callB'), bMem: document.getElementById('callBmem'),
+      verdict: document.getElementById('verdict6'),
+      next: document.getElementById('n6'), prev: document.getElementById('p6'), reset: document.getElementById('r6')
+    };
+
+    function fillMem(container, items) {
+      container.innerHTML = items.map(function (it) {
+        var cls = 'mem-item' + (it[1] ? ' ' + it[1] : '');
+        return '<div class="' + cls + '">' + it[0] + '</div>';
+      }).join('');
+    }
+
+    function render() {
+      var s = steps[i];
+      el.cap.innerHTML = s.cap;
+      el.a.className = 'sess' + (s.aCls ? ' ' + s.aCls : '');
+      el.b.className = 'sess' + (s.bCls ? ' ' + s.bCls : '');
+      fillMem(el.aMem, s.aItems);
+      fillMem(el.bMem, s.bItems);
+      el.verdict.innerHTML = s.verdict;
+      el.verdict.className = 'verdict ' + s.vcls;
+
+      el.prev.disabled = (i === 0);
+      el.next.disabled = (i === steps.length - 1);
+      el.next.textContent = (i === steps.length - 1) ? 'End of sequence' : 'Step forward';
+    }
+
+    el.next.addEventListener('click', function () { if (i < steps.length - 1) { i++; render(); } });
+    el.prev.addEventListener('click', function () { if (i > 0) { i--; render(); } });
+    el.reset.addEventListener('click', function () { i = 0; render(); });
+
+    render();
+  })();
+
+  /* ---------- Q7: lazy expiry ---------- */
+  (function () {
+    var steps = [
+      {
+        cap: 'Nothing has been requested yet on this call. The pending map holds no entry.',
+        clock: 't = 0s', winW: '0%', nowL: '0%', late: false,
+        map: '— no entry —', verdict: '', vcls: ''
+      },
+      {
+        cap: '<b>"I want to cancel my policy BN742D."</b> <code>requestTransaction()</code> writes one entry, timestamped now. This is the only write the map ever gets for this request.',
+        clock: 't = 0s — request placed', winW: '92%', nowL: '0%', late: false,
+        map: '{ action: "cancel_policy", policyId: "BN742D", requestedAt: T }', verdict: '', vcls: ''
+      },
+      {
+        cap: '<b>8 seconds later, "Yes."</b> <code>getPendingTransaction()</code> runs, computes <code>Date.now() - requestedAt = 8000</code>, well under the 60,000 ms window.',
+        clock: 't = 8s', winW: '92%', nowL: '12%', late: false,
+        map: 'status: "active" → confirm_transaction may proceed',
+        verdict: '<b>Executed.</b> <code>say_verbatim: "policy BN742D, cancelled."</code> appears, the only place in the entire flow that word exists, and the map entry is cleared.',
+        vcls: 'good'
+      },
+      {
+        cap: '<b>Suppose instead the caller went quiet for 65 seconds</b> before saying "Yes." Same request, same map entry, nothing swept it away in the meantime — nothing runs until this exact read.',
+        clock: 't = 65s (hypothetical)', winW: '92%', nowL: '97%', late: true,
+        map: 'status: "expired" → entry deleted right here, on this read',
+        verdict: 'Rejected as <code>request_expired</code>, a different outcome from "nothing was pending" — the model is told the caller did ask, just too long ago to trust this "yes" as attaching to it.',
+        vcls: 'bad'
+      }
+    ];
+
+    var i = 0;
+    var el = {
+      cap: document.getElementById('cap7'),
+      clock: document.getElementById('txclock'), win: document.getElementById('txwindow'), now: document.getElementById('txnow'),
+      mapVal: document.getElementById('txmapval'), verdict: document.getElementById('verdict7'),
+      next: document.getElementById('n7'), prev: document.getElementById('p7'), reset: document.getElementById('r7')
+    };
+
+    function render() {
+      var s = steps[i];
+      el.cap.innerHTML = s.cap;
+      el.clock.textContent = s.clock;
+      el.win.style.width = s.winW;
+      el.now.style.left = s.nowL;
+      el.now.className = 'tx-now' + (s.late ? ' late' : '');
+      el.mapVal.textContent = s.map;
+      el.verdict.innerHTML = s.verdict;
+      el.verdict.className = 'verdict ' + s.vcls;
+
+      el.prev.disabled = (i === 0);
+      el.next.disabled = (i === steps.length - 1);
+      el.next.textContent = (i === steps.length - 1) ? 'End of sequence' : 'Step forward';
+    }
+
+    el.next.addEventListener('click', function () { if (i < steps.length - 1) { i++; render(); } });
+    el.prev.addEventListener('click', function () { if (i > 0) { i--; render(); } });
+    el.reset.addEventListener('click', function () { i = 0; render(); });
+
+    render();
+  })();
+
+  /* ---------- Q8: version gate ---------- */
+  (function () {
+    var steps = [
+      {
+        cap: 'Three versions on file. <code>gpt-realtime-mini</code> is active.',
+        r1: ['ACTIVE', 'live', ''], r2: ['candidate', '', ''], r3: ['deprecated', '', ''],
+        verdict: '', vcls: '', next: 'gpt-realtime-mini'
+      },
+      {
+        cap: '<b>Try to activate the deprecated preview.</b> The function checks <code>regression.failed &gt; 0</code>, not the status label.',
+        r1: ['ACTIVE', 'live', ''], r2: ['candidate', '', ''], r3: ['deprecated', '', 'tried-blocked'],
+        verdict: '<code>Blocked: 12 of 42 regression tests are failing for gpt-realtime-mini-preview-2024 (last run 2025-01-05). Fix the suite before promoting.</code> <code>activeModel</code> is untouched.',
+        vcls: 'bad', next: 'gpt-realtime-mini'
+      },
+      {
+        cap: '<b>Try the candidate instead.</b> Same gate, same one comparison, this time <code>regression.failed === 0</code>.',
+        r1: ['ACTIVE', 'live', ''], r2: ['checking…', '', 'tried-ok'], r3: ['deprecated', '', ''],
+        verdict: '42 of 42 passed. The gate clears, and the one line the whole function exists to reach runs: <code>activeModel = id</code>.',
+        vcls: '', next: 'gpt-realtime-mini'
+      },
+      {
+        cap: '<b>The switch has actually taken.</b> Not a label change, the next line any code reads <code>getActiveModel()</code> gets a different answer.',
+        r1: ['production', '', 'dim'], r2: ['ACTIVE', 'live', 'tried-ok'], r3: ['deprecated', '', ''],
+        verdict: 'Start a new call now, on any tab, and its <code>Upstream session opened against …</code> audit line names <code>gpt-realtime</code>, not <code>gpt-realtime-mini</code>. Nothing was redeployed.',
+        vcls: 'good', next: 'gpt-realtime'
+      }
+    ];
+
+    var i = 0;
+    var el = {
+      cap: document.getElementById('cap8'),
+      row1: document.getElementById('q8row1'), b1: document.getElementById('q8b1'),
+      row2: document.getElementById('q8row2'), b2: document.getElementById('q8b2'),
+      row3: document.getElementById('q8row3'), b3: document.getElementById('q8b3'),
+      verdict: document.getElementById('verdict8'), next: document.getElementById('q8nextcall'),
+      nextBtn: document.getElementById('n8'), prev: document.getElementById('p8'), reset: document.getElementById('r8')
+    };
+
+    function applyRow(rowEl, badgeEl, def) {
+      badgeEl.textContent = def[0];
+      badgeEl.className = 'q8-badge' + (def[1] ? ' ' + def[1] : '');
+      rowEl.className = 'q8-row' + (def[2] ? ' ' + def[2] : '');
+    }
+
+    function render() {
+      var s = steps[i];
+      el.cap.innerHTML = s.cap;
+      applyRow(el.row1, el.b1, s.r1);
+      applyRow(el.row2, el.b2, s.r2);
+      applyRow(el.row3, el.b3, s.r3);
+      el.verdict.innerHTML = s.verdict;
+      el.verdict.className = 'verdict ' + s.vcls;
+      el.next.textContent = s.next;
+
+      el.prev.disabled = (i === 0);
+      el.nextBtn.disabled = (i === steps.length - 1);
+      el.nextBtn.textContent = (i === steps.length - 1) ? 'End of sequence' : 'Step forward';
+    }
+
+    el.nextBtn.addEventListener('click', function () { if (i < steps.length - 1) { i++; render(); } });
+    el.prev.addEventListener('click', function () { if (i > 0) { i--; render(); } });
+    el.reset.addEventListener('click', function () { i = 0; render(); });
+
+    render();
+  })();
+</script>
