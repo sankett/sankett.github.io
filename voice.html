@@ -1,3 +1,8 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Under the Hood: Nine Questions</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Serif:ital,wght@0,400;0,500;1,400&display=swap">
 <style>
@@ -89,9 +94,42 @@
   }
   .progress a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
+  .leadership { margin: 2rem 0 1rem; padding: 1.2rem; border: 1px solid var(--accent); border-radius: 6px; background: var(--accent-soft); }
+  .leadership h2 { font-size: 1.35rem; margin-bottom: .55rem; }
+  .leadership p { color: var(--ink-soft); }
+  .snapshot, .journey, .decisions { display: grid; grid-template-columns: repeat(3, 1fr); gap: .65rem; margin-top: .9rem; }
+  .snapshot > div, .journey > div, .decisions > div { background: var(--surface); border: 1px solid var(--line); border-radius: 4px; padding: .7rem .8rem; font-family: var(--sans); font-size: .82rem; color: var(--ink-soft); }
+  .snapshot b, .journey b, .decisions b { display: block; color: var(--ink); margin-bottom: .2rem; }
+  .status { margin-left: auto; font-family: var(--mono); font-size: .62rem; letter-spacing: .08em; text-transform: uppercase; padding: .2rem .45rem; border-radius: 3px; white-space: nowrap; background: var(--live-soft); color: var(--live); }
+  .status.simulated { background: var(--warn-soft); color: var(--warn); }
+  .status.architecture { background: var(--dead-soft); color: var(--dead); }
+  .glossary { margin: 1rem 0 2rem; padding: 1rem 1.2rem; border: 1px solid var(--line); border-radius: 5px; background: var(--surface); }
+  .glossary dl { display: grid; grid-template-columns: 11rem 1fr; gap: .35rem .8rem; margin: .6rem 0 0; font-family: var(--sans); font-size: .84rem; }
+  .glossary dt { font-family: var(--mono); color: var(--accent); }
+  .glossary dd { margin: 0; color: var(--ink-soft); }
+  @media (max-width: 650px) { .snapshot, .journey, .decisions { grid-template-columns: 1fr; } .glossary dl { grid-template-columns: 1fr; gap: .1rem; } .glossary dd { margin-bottom: .45rem; } }
+
   section.q { padding-top: 3rem; }
   .q-head { display: flex; align-items: baseline; gap: 0.9rem; margin-bottom: 0.4rem; }
   .q-num { font-family: var(--mono); font-size: 0.85rem; font-weight: 600; color: var(--accent); }
+  .question-brief {
+    margin: .75rem 0 1.35rem; border: 1px solid var(--line); border-radius: 5px;
+    background: var(--surface); overflow: hidden;
+  }
+  .question-brief-row {
+    display: grid; grid-template-columns: 10rem 1fr; gap: 1rem;
+    padding: .72rem .9rem; border-top: 1px solid var(--line);
+  }
+  .question-brief-row:first-child { border-top: 0; }
+  .question-brief-label {
+    font-family: var(--mono); font-size: .68rem; letter-spacing: .11em;
+    text-transform: uppercase; color: var(--accent); font-weight: 600;
+  }
+  .question-brief-text { color: var(--ink-soft); font-family: var(--sans); font-size: .92rem; }
+  .question-brief-text strong { color: var(--ink); font-weight: 600; }
+  @media (max-width: 42rem) {
+    .question-brief-row { grid-template-columns: 1fr; gap: .28rem; }
+  }
   h2 {
     font-family: var(--sans); font-weight: 700;
     font-size: clamp(1.4rem, 3vw, 1.8rem); letter-spacing: -0.015em;
@@ -593,6 +631,9 @@
   }
 </style>
 
+</head>
+<body>
+
 <div class="layout">
   <aside class="sidebar">
     <span class="sidebar-title">Jump to question</span>
@@ -625,8 +666,50 @@
     </div>
   </header>
 
+  <section class="leadership" id="leadership-summary" aria-labelledby="leadership-title">
+    <h2 id="leadership-title">Leadership view</h2>
+    <p><strong>The recommendation:</strong> keep Acme’s relay in the audio path so application code owns state, interruption, validation, handoff, audit, and model governance. This POC demonstrates Q1–Q8 in running code; Q9 remains an architecture decision.</p>
+    <div class="snapshot">
+      <div><b>Demonstrated now</b>State continuity, barge-in, deterministic capture, audit, handoff packets, transaction gates, and model activation.</div>
+      <div><b>Simulated or fixture-based</b>Browser caller, keypad clicks, local disk, fixture knowledge base, and regression counts.</div>
+      <div><b>Production decisions</b>Shared durable storage, contact-centre integration, retention policy, rollout strategy, and half-cascade scope.</div>
+    </div>
+    <h3>Recommended 10-minute journey</h3>
+    <div class="journey">
+      <div><b>1 · Why the relay</b>Start with Q1 and show what survives a session boundary.</div>
+      <div><b>2 · Proof of control</b>Use Q5, Q2, and Q3 to show validation, interruption, and safe escalation.</div>
+      <div><b>3 · Governance choice</b>Close with Q6, Q8, and Q9: evidence, model change control, and the remaining decision.</div>
+    </div>
+  </section>
+
+  <div class="glossary" id="glossary">
+    <h3 style="margin-top:0">Plain-language glossary</h3>
+    <dl>
+      <dt>Realtime session</dt><dd>One live connection to the speech-to-speech model; its conversational memory ends when the connection ends.</dd>
+      <dt>Relay</dt><dd>Acme-owned service between caller and model that can inspect audio, coordinate turns, and enforce rules.</dd>
+      <dt>CallState</dt><dd>Business facts kept outside the model, such as the field being captured and whether it was validated.</dd>
+      <dt>Ground truth</dt><dd>Evidence directly observed by the system, such as keypad input or recorded audio.</dd>
+      <dt>Half-cascade</dt><dd>A text-only model path with a review step and separate speech synthesis before audio reaches the caller.</dd>
+    </dl>
+  </div>
+
   <section class="q" id="q1">
-    <div class="q-head"><span class="q-num">Q1</span><h2>Carrying state across Realtime sessions</h2></div>
+    <div class="q-head"><span class="q-num">Q1</span><h2>Carrying state across Realtime sessions</h2><span class="status simulated">Real + simulated boundary</span></div>
+
+    <div class="question-brief">
+      <div class="question-brief-row">
+        <div class="question-brief-label">Problem</div>
+        <div class="question-brief-text">A call flow can move through more than one <strong>AI Agent block</strong>. An AI Agent block is the voice-bot step in the contact-center/call-flow platform: caller audio enters that block, the AI agent handles that part of the call, and then the flow may continue to another block. If each block opens a fresh OpenAI Realtime session, the model's conversation memory from the previous block is gone.</div>
+      </div>
+      <div class="question-brief-row">
+        <div class="question-brief-label">POC solution</div>
+        <div class="question-brief-text">The relay keeps business state in <strong>CallState</strong> outside the Realtime session. The demo simulates a block boundary, closes one session, opens another, and reseeds the new session from CallState and durable local files.</div>
+      </div>
+      <div class="question-brief-row">
+        <div class="question-brief-label">Production</div>
+        <div class="question-brief-text">Use the stable call identifier from the platform and store state in a shared service such as Redis or Postgres. Local disk proves the concept, but production needs storage reachable by every block and service instance.</div>
+      </div>
+    </div>
 
     <h3>First, what a "session" actually is</h3>
     <p>
@@ -926,7 +1009,22 @@
   </section>
 
   <section class="q" id="q2">
-    <div class="q-head"><span class="q-num">Q2</span><h2>Who owns barge-in</h2></div>
+    <div class="q-head"><span class="q-num">Q2</span><h2>Who owns barge-in</h2><span class="status simulated">Real + browser audio</span></div>
+
+    <div class="question-brief">
+      <div class="question-brief-row">
+        <div class="question-brief-label">Problem</div>
+        <div class="question-brief-text">Barge-in means the caller talks while the bot is still speaking, and the bot should stop. If the SIP leg is wired straight to OpenAI, Acme's code is outside the audio path and cannot make that interruption decision.</div>
+      </div>
+      <div class="question-brief-row">
+        <div class="question-brief-label">POC solution</div>
+        <div class="question-brief-text">The browser sends caller audio through the relay, and the relay tracks both model generation and actual playback. When speech starts while playback is still active, the relay stops the response.</div>
+      </div>
+      <div class="question-brief-row">
+        <div class="question-brief-label">Production</div>
+        <div class="question-brief-text">Put a real SIP/RTP media gateway or bridge in the same control position as the browser relay. Tune sensitivity against real phone audio, echo, codec loss, and production latency.</div>
+      </div>
+    </div>
 
     <h3>The positional problem, before the technical one</h3>
     <p>
@@ -1210,7 +1308,22 @@ this.audit({
   </section>
 
   <section class="q" id="q3">
-    <div class="q-head"><span class="q-num">Q3</span><h2>Handing off to a human</h2></div>
+    <div class="q-head"><span class="q-num">Q3</span><h2>Handing off to a human</h2><span class="status simulated">Real + simulated last hop</span></div>
+
+    <div class="question-brief">
+      <div class="question-brief-row">
+        <div class="question-brief-label">Problem</div>
+        <div class="question-brief-text">A handoff is only successful if the human agent receives the context the bot already collected. Otherwise the caller repeats themselves and the automation feels broken.</div>
+      </div>
+      <div class="question-brief-row">
+        <div class="question-brief-label">POC solution</div>
+        <div class="question-brief-text">The orchestrator fires handoff from deterministic triggers, uses a latch so it happens once, and builds a structured HandoffPacket from CallState and audit data. The page shows the screen-pop style packet.</div>
+      </div>
+      <div class="question-brief-row">
+        <div class="question-brief-label">Production</div>
+        <div class="question-brief-text">Connect that packet to the actual contact-center platform through screen-pop, a transfer reference id, or a whisper summary. The final transfer path is platform-specific and is not implemented in the POC.</div>
+      </div>
+    </div>
 
     <h3>The bar for success is narrower than it sounds</h3>
     <p>
@@ -1402,7 +1515,22 @@ this.audit({
   </section>
 
   <section class="q" id="q4">
-    <div class="q-head"><span class="q-num">Q4</span><h2>Grounding in a knowledge base</h2></div>
+    <div class="q-head"><span class="q-num">Q4</span><h2>Grounding in a knowledge base</h2><span class="status simulated">Real + fixture data</span></div>
+
+    <div class="question-brief">
+      <div class="question-brief-row">
+        <div class="question-brief-label">Problem</div>
+        <div class="question-brief-text">The bot must answer policy questions from approved knowledge, not from memory or guessing. It also has to handle cases where the knowledge base has no answer.</div>
+      </div>
+      <div class="question-brief-row">
+        <div class="question-brief-label">POC solution</div>
+        <div class="question-brief-text">The relay exposes a knowledge-base tool backed by fixture articles. Search is deterministic and anchor-gated, and the model receives either grounded content or a clear no-match instruction.</div>
+      </div>
+      <div class="question-brief-row">
+        <div class="question-brief-label">Production</div>
+        <div class="question-brief-text">Replace fixture search with governed retrieval over the real content source, including versioning, freshness rules, latency measurement, and evaluation against real questions.</div>
+      </div>
+    </div>
 
     <h3>Not a binary, three techniques layered</h3>
     <p>
@@ -1549,7 +1677,22 @@ this.audit({
   </section>
 
   <section class="q" id="q5">
-    <div class="q-head"><span class="q-num">Q5</span><h2>Capturing structured and alphanumeric values</h2></div>
+    <div class="q-head"><span class="q-num">Q5</span><h2>Capturing structured and alphanumeric values</h2><span class="status">Real running code</span></div>
+
+    <div class="question-brief">
+      <div class="question-brief-row">
+        <div class="question-brief-label">Problem</div>
+        <div class="question-brief-text">Voice bots struggle with values like policy IDs because letters, numbers, and similar-sounding characters are easy to mishear. The system needs a reliable result, not model confidence.</div>
+      </div>
+      <div class="question-brief-row">
+        <div class="question-brief-label">POC solution</div>
+        <div class="question-brief-text">The POC uses a deterministic ladder: normalize the heard value, check the required pattern, look it up in fixture policy data, then fall back to NATO spelling and keypad entry.</div>
+      </div>
+      <div class="question-brief-row">
+        <div class="question-brief-label">Production</div>
+        <div class="question-brief-text">Use the same ladder against production policy services and real call audio. Add field-specific routing, accuracy targets, and a fallback channel such as SMS/web link if the business wants Tier 4.</div>
+      </div>
+    </div>
 
     <p>
       This is the core of the whole build. Every other question's page is a view onto machinery
@@ -1718,7 +1861,22 @@ this.audit({
   </section>
 
   <section class="q" id="q6">
-    <div class="q-head"><span class="q-num">Q6</span><h2>Knowing what the model actually heard</h2></div>
+    <div class="q-head"><span class="q-num">Q6</span><h2>Knowing what the model actually heard</h2><span class="status simulated">Real + opt-in recording</span></div>
+
+    <div class="question-brief">
+      <div class="question-brief-row">
+        <div class="question-brief-label">Problem</div>
+        <div class="question-brief-text">In speech-to-speech, a transcript is not automatically proof of what the model heard. A separate transcription path can disagree with the model's own understanding.</div>
+      </div>
+      <div class="question-brief-row">
+        <div class="question-brief-label">POC solution</div>
+        <div class="question-brief-text">Audit entries are tagged by authority: ground-truth, authoritative, or index-only. Raw audio and audit files are written only when recording is explicitly enabled.</div>
+      </div>
+      <div class="question-brief-row">
+        <div class="question-brief-label">Production</div>
+        <div class="question-brief-text">Define consent, retention, encryption, access control, and compliance rules for call audio and audit data. Decide which records can settle disputes and which are only searchable indexes.</div>
+      </div>
+    </div>
 
     <p>
       Worth conceding plainly before anything else, because it buys the authority to be firm on
@@ -1866,7 +2024,22 @@ this.audit({
   </section>
 
   <section class="q" id="q7">
-    <div class="q-head"><span class="q-num">Q7</span><h2>Guarantees inside a free-form conversation</h2></div>
+    <div class="q-head"><span class="q-num">Q7</span><h2>Guarantees inside a free-form conversation</h2><span class="status simulated">Real layers 1–2</span></div>
+
+    <div class="question-brief">
+      <div class="question-brief-row">
+        <div class="question-brief-label">Problem</div>
+        <div class="question-brief-text">A free-form voice conversation still needs hard guarantees at business-critical moments: do not read back an unvalidated value, and do not execute a transaction without confirmation.</div>
+      </div>
+      <div class="question-brief-row">
+        <div class="question-brief-label">POC solution</div>
+        <div class="question-brief-text">The orchestrator controls the payload shape. For invalid captures, the model never receives a say_verbatim field. For cancellation, a pending transaction must be confirmed before its expiry window closes.</div>
+      </div>
+      <div class="question-brief-row">
+        <div class="question-brief-label">Production</div>
+        <div class="question-brief-text">Persist transaction state, add idempotency, connect to real authorization and policy systems, and decide whether any turns require a pre-speech output review layer.</div>
+      </div>
+    </div>
 
     <p>
       Three layers, strongest first, already introduced. Worth going under the hood on two of them
@@ -1987,7 +2160,22 @@ this.audit({
   </section>
 
   <section class="q" id="q8">
-    <div class="q-head"><span class="q-num">Q8</span><h2>Version pinning and rollback</h2></div>
+    <div class="q-head"><span class="q-num">Q8</span><h2>Version pinning and rollback</h2><span class="status simulated">Real gate + fixtures</span></div>
+
+    <div class="question-brief">
+      <div class="question-brief-row">
+        <div class="question-brief-label">Problem</div>
+        <div class="question-brief-text">Model upgrades can change behavior. Production needs a way to choose the active model deliberately and roll back without redeploying the whole system.</div>
+      </div>
+      <div class="question-brief-row">
+        <div class="question-brief-label">POC solution</div>
+        <div class="question-brief-text">A model registry chooses the active model when a new Realtime session opens. Candidate versions must pass a fixture regression gate before activation.</div>
+      </div>
+      <div class="question-brief-row">
+        <div class="question-brief-label">Production</div>
+        <div class="question-brief-text">Use real regression cases, staged rollout, monitoring, and automated rollback criteria. Shadow traffic and lifecycle governance are production additions beyond this demo.</div>
+      </div>
+    </div>
 
     <p>
       Q1's whole property pays off a second time here, and it is worth saying that connection out
@@ -2114,7 +2302,22 @@ this.audit({
   </section>
 
   <section class="q" id="q9">
-    <div class="q-head"><span class="q-num">Q9</span><h2>Half-cascade versus full speech-to-speech</h2></div>
+    <div class="q-head"><span class="q-num">Q9</span><h2>Half-cascade versus full speech-to-speech</h2><span class="status architecture">Architecture only</span></div>
+
+    <div class="question-brief">
+      <div class="question-brief-row">
+        <div class="question-brief-label">Problem</div>
+        <div class="question-brief-text">Full speech-to-speech is fast and natural, but there is no checkpoint before audio reaches the caller. Half-cascade adds that checkpoint but changes the pipeline.</div>
+      </div>
+      <div class="question-brief-row">
+        <div class="question-brief-label">POC solution</div>
+        <div class="question-brief-text">There is no running Q9 implementation. The page documents the architecture tradeoff and marks it visibly as architecture-only.</div>
+      </div>
+      <div class="question-brief-row">
+        <div class="question-brief-label">Production</div>
+        <div class="question-brief-text">Run a controlled experiment on representative calls to measure latency, accuracy, cost, interruption behavior, and how often a pre-speech veto would actually change an answer.</div>
+      </div>
+    </div>
 
     <div class="notbuilt">
       <span class="notbuilt-tag">Read this before the rest of the section</span>
@@ -2267,6 +2470,17 @@ this.audit({
         </p>
       </div>
     </div>
+
+    <section class="leadership" id="decisions" aria-labelledby="decisions-title">
+      <h2 id="decisions-title">What leadership needs to decide next</h2>
+      <p>The POC establishes the control points. Production work now depends on a small set of Acme-specific choices.</p>
+      <div class="decisions">
+        <div><b>Continuity</b>Confirm the stable call identifier and choose a shared store such as Redis or Postgres.</div>
+        <div><b>Operations</b>Choose the contact-centre transfer path, audio retention rules, and ownership of audit data.</div>
+        <div><b>Quality</b>Provide real regression cases and decide which turns, if any, justify a half-cascade veto path.</div>
+      </div>
+      <p style="margin-top:.9rem"><strong>Recommended next experiment:</strong> run the relay against representative calls, measure interruption and validation outcomes, and use those results to size the production store, rollout gate, and Q9 scope.</p>
+    </section>
 
     <footer class="serial" style="border-top-color: var(--accent); padding-top: 2.2rem;">
       That's all nine. One principle underneath eight of them, and one honest gap where the ninth
@@ -2928,3 +3142,5 @@ this.audit({
     render();
   })();
 </script>
+</body>
+</html>
